@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check In Tablet System</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- =============================== [SECTION: STYLES] (rarely changes) =============================== -->
+  <style>
+    :root{ --gold1:#f3dc8a; --gold2:#b8922a; --text:#f3f4f6; --muted:#c9cacc; }
+    html,body{ height:100%; }
+    body{ margin:0; background:#0f0f10; color:var(--text); font-family:Inter,system-ui,Arial; }
+
+    .stage{
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background: radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
+    }
+    .stack{ width:min(960px,92%); text-align:center; padding:32px 12px 40px; }
+
+    .brand{ width:92px;height:92px;margin:0 auto 14px; border-radius:20px; overflow:hidden; }
+    .brand img{ width:100%; height:100%; object-fit:contain; display:block; }
+
+    h1{ margin:0 0 6px; font-size:clamp(32px,6.4vw,56px); font-weight:900; letter-spacing:.3px; }
+    .sub{ color:var(--muted); margin:0 0 26px; font-size:clamp(14px,2.6vw,18px); }
+
+    .btn{
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      width:100%; height:84px; border-radius:16px; border:0; cursor:pointer;
+      font-weight:800; font-size:clamp(18px,3.8vw,26px);
+      transition:transform .06s, background .15s, color .15s, opacity .15s, filter .1s;
+      position:relative; overflow:hidden; touch-action:manipulation;
+    }
+    .btn:active{ transform:scale(.99); }
+    .btn-gold{ background:linear-gradient(180deg,var(--gold1),var(--gold2)); color:#1b1400; }
+    .btn-dark{ background:#121316; color:var(--gold1); border:1px solid rgba(255,215,130,.35); }
+    .btn-disabled{ background:#2a2a2a !important; color:#bbb !important; cursor:not-allowed !important; opacity:.9; }
+
+    .input{
+      width:min(760px,100%); margin:0 auto; padding:18px 20px;
+      background:#0f1012; color:#fff; border:1px solid rgba(255,255,255,.12);
+      border-radius:14px; font-size:clamp(18px,3.8vw,24px); outline:none;
+    }
+
+    @keyframes shake { 0%{transform:translateX(0)}20%{transform:translateX(-6px)}
+      40%{transform:translateX(6px)}60%{transform:translateX(-6px)}
+      80%{transform:translateX(6px)}100%{transform:translateX(0)} }
+    .input-error{ animation:shake .35s ease; border-color:#ff6b6b !important; }
+
+    .chip{
+      padding:22px 26px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+      background:#121316; color:#eee; font-weight:800; cursor:pointer; text-align:center;
+      width:min(860px,100%); margin:0 auto; position:relative; overflow:hidden; touch-action:manipulation;
+      font-size:clamp(20px, 4.6vw, 30px); line-height:1.15;
+    }
+    .chip.sel{ background:linear-gradient(180deg,var(--gold1),var(--gold2)); color:#1b1400; }
+
+  /* Locked state after successful check-in */
+  .chip.checked{
+    background: #1f2d1f !important;      /* soft green bg */
+    color:#9ae6b4 !important;             /* light green text */
+    border-color: rgba(154,230,180,.35) !important;
+  }
+  .chip:disabled{
+    cursor:not-allowed !important;
+    opacity:.88;
+  }
+
+    .screen{ display:none; opacity:0; transform:translateY(12px); transition:.25s; }
+    .screen.show{ display:block; opacity:1; transform:translateY(0); }
+
+    #adminModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);
+                 align-items:center; justify-content:center; }
+    #adminPanel{ background:linear-gradient(180deg,#17181c,#101113); color:#eee;
+                 width:min(920px,94%); max-height:88vh; overflow:auto;
+                 border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px; }
+    .pill{ padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+           background:rgba(255,255,255,.06); font-size:12px; }
+    .admin-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0; }
+    .admin-section{ border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:12px; margin-top:12px; }
+
+    .day-card{ border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; margin-top:10px; }
+    .day-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .class-row{ display:flex; gap:6px; margin:6px 0; }
+    .class-row input{ flex:1; padding:10px; border:1px solid rgba(255,255,255,.2); background:#0f1012; color:#fff; border-radius:8px; }
+    .icon-btn{ padding:8px 10px; border:0; border-radius:8px; cursor:pointer; font-size:14px; }
+    .add-btn{ background:linear-gradient(180deg,var(--gold1),var(--gold2)); color:#1b1400; font-weight:800; }
+    .del-btn{ background:#0f1012; color:#eee; border:1px solid rgba(255,255,255,.2); }
+    .sync-badge{ padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; }
+    .sync-ok{ background:#0f2f1a; color:#8ef0b0; border:1px solid #1e6a3a; }
+    .sync-bad{ background:#2f0f12; color:#ff9aa1; border:1px solid #7a2229; }
+
+    .gold-icon { color: var(--gold1); fill: currentColor; }
+
+    .ripple { position:absolute; border-radius:9999px; transform:scale(0); opacity:.45; pointer-events:none; animation:ripple-burst .28s ease-out forwards; }
+    .btn-dark .ripple, .chip .ripple, .nkey .ripple { background: rgba(255,255,255,.35); }
+    .btn-gold .ripple { background: rgba(0,0,0,.35); }
+    @keyframes ripple-burst { to { transform:scale(6); opacity:0; } }
+
+    .btn-sm{ height:52px; font-size:clamp(16px,3vw,20px); border-radius:12px; }
+
+    .nf{ width:min(760px,100%); margin:0 auto; max-height:0; overflow:hidden; transition:max-height 280ms ease, margin-top 280ms ease; }
+    .nf.open{ margin-top:10px; max-height:220px; }
+    .nf-text{ color:#c9cacc; text-align:center; font-size:clamp(13px,2.4vw,16px); margin:6px 0 8px; }
+    .nf-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:480px){ .nf-actions{ grid-template-columns:1fr; } }
+    .error-message{opacity:0;transform:translateY(-6px);transition:opacity 180ms ease,transform 180ms ease;}
+    .secondary-buttons{opacity:0;transform:translateY(10px);transition:opacity 260ms ease-out,transform 260ms ease-out;}
+    .reveal{opacity:1 !important;transform:translateY(0) !important;}
+    .back-button{ height:84px; font-size:clamp(18px,3.8vw,26px); border-radius:16px;
+      transition: transform 280ms ease-in-out, height 280ms ease-in-out, font-size 280ms ease-in-out, border-radius 280ms ease-in-out, margin-top 280ms ease-in-out; }
+    .back-button.shrink{ height:52px; font-size:clamp(16px,3vw,20px); border-radius:12px; transform:translateY(6px) scale(0.96); opacity:0.95; }
+    @media (prefers-reduced-motion: reduce){ .error-message,.secondary-buttons,.back-button,.nf{transition:none !important;} }
+
+    /* ===== Polished Number Pad ===== */
+    .numpad{
+      width:100%;
+      max-width:420px;           /* centers & limits width */
+      margin:14px auto 0;        /* center under input */
+      display:grid;
+      grid-template-columns: repeat(3, minmax(104px, 1fr));
+      gap:12px;
+      justify-items:stretch;
+    }
+    .nkey{
+      height:84px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.14);
+      background:linear-gradient(180deg,#15161a,#0f1012);
+      color:#f3f4f6;
+      font-weight:900;
+      font-size:clamp(22px,4.8vw,30px);
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 6px 14px rgba(0,0,0,.35);
+      transition:transform .06s, background .15s, border-color .15s, box-shadow .15s;
+      position:relative; overflow:hidden; touch-action:manipulation;
+    }
+    .nkey:active{ transform:scale(.98); }
+    .nkey.muted{ opacity:.9; }
+    .nkey::after{
+      content:""; position:absolute; inset:0;
+      background: radial-gradient(120% 120% at 50% -20%, rgba(255,255,255,.12), transparent 60%);
+      pointer-events:none;
+      border-radius:inherit;
+    }
+
+  </style>
+
+  <!-- =============================== [SECTION: STYLES – LINK BUTTON] =============================== -->
+  <style>
+    /* small, quiet, centered link-style button */
+    .minor-row{ display:flex; justify-content:center; margin-top:10px; }
+    .link-btn{
+      background:transparent; border:0; cursor:pointer;
+      color:var(--muted); font-weight:700; font-size:clamp(14px,2.6vw,16px);
+      padding:6px 10px; border-radius:10px;
+      transition: color .15s, background .15s;
+    }
+    .link-btn:hover{ color:var(--gold1); background:rgba(255,255,255,.06); }
+  </style>
+
+  <!-- =============================== [SECTION: STYLES – NUMPAD HOST] =============================== -->
+  <style>
+    .pad-host{ width:100%; max-width:420px; margin:14px auto 0; }
+  </style>
+
+
+
+  <script>
+  /* =============================== [SECTION: SETTINGS] (you change these) =============================== */
+  /* Build v1 – 2025-09-29 – Sectioned layout */
+  const DEV =
+    location.hostname === 'localhost' ||
+    location.hostname === '127.0.0.1' ||
+    location.hostname === '0.0.0.0' ||
+    location.hostname === '::1' ||
+    location.protocol === 'file:'; // Auto toggle based on environment
+
+  const TEST = location.hostname === 'minneapolissalsabachatadance.com';
+
+  const CONFETTI = !DEV;
+  const RIPPLE   = !DEV;
+  const COUNTDOWN_SEC = DEV ? 2 : 5;
+
+  const LOGO_URL = "https://storage.googleapis.com/msgsndr/3RfSeF58PmlwTx5aIQ0a/media/68cb7c7d10510f54a333c881.svg";
+
+/* === URLS (switch by DEV/TEST) ===
+     - Main/home (where the tablet starts):
+         DEV  → ./index.html
+         TEST → https://minneapolissalsabachatadance.com/new-tablet-home-page-908608
+         PROD → https://msbdance.com/tablet
+     - Options page:
+         DEV  → ./options.html
+         TEST → https://minneapolissalsabachatadance.com/new-tablet-non-member-options-page
+         PROD → https://minneapolissalsabachatadance.com/new-tablet-options-new
+  */
+  const HOME_URL = DEV
+    ? "./index.html"
+    : TEST
+    ? "https://minneapolissalsabachatadance.com/new-tablet-home-page-908608"
+    : "https://msbdance.com/tablet";
+
+  const DROPIN_RETURN_URL = DEV
+    ? "./options.html"
+    : TEST
+    ? "https://minneapolissalsabachatadance.com/new-tablet-non-member-options-page"
+    : "https://minneapolissalsabachatadance.com/new-tablet-options-new";
+
+  const MEMBER_RETURN_URL = DEV
+    ? "./member-options.html"
+    : TEST
+    ? "https://minneapolissalsabachatadance.com/new-tablet-member-options-page"
+    : "https://msbdance.com/tablet-member-options";
+
+  const DROPIN_NEW_URL = DROPIN_RETURN_URL;
+
+/* Apps Script (unchanged) */
+  const SYNC_URL = "https://script.google.com/macros/s/AKfycbwoHg_YaLdOxp_DL50Y2JiQ_xkF005eEFqyNqjBGCo1ONLWA37fsfbg-gd-BhYb5c26/exec";
+  const ADMIN_PIN = "2468";
+  const LOG_URL   = SYNC_URL;
+
+
+
+  /* Default data (cloud can override) */
+  let SCHEDULE = { sun:[], mon:["Salsa Basics","Beginner Salsa","Beginner Bachata"], tue:["Salsa Basics","Beginner Salsa","Salsa Shines Lvl 2","Afrobeats","Beginner Salsa Plus"], wed:["Salsa Shines Level 1","Sensual Bachata Body Movement","Beginner Salsa Plus","Advanced Beginner Salsa"], thu:["Bachata Shines","Beginner Bachata","Advanced Beginner Bachata","Sensual Bachata Partnerwork"], fri:[], sat:[] };
+  // Ensure MEMBERS exists even if loaded from cloud later (Make.com is used for verification; this is for legacy/logging safety)
+  let MEMBERS = [];
+
+  const DAY_KEYS=["sun","mon","tue","wed","thu","fri","sat"];
+  const $ = s => document.querySelector(s);
+  const log = (...a)=> DEV && console.log("[TAB]", ...a);
+
+  /* =============================== [SECTION: HELPERS] (rarely changes) =============================== */
+  const digits10 = s => String(s||"").replace(/\D/g,"").slice(-10);
+  const todayKey = () => DAY_KEYS[new Date().getDay()];
+  const normPhone = s => String(s||"").replace(/\D/g,"").slice(-10);
+
+  /* ===== Phone format + Numpad ===== */
+  function formatPhonePretty(raw10){
+    const d = String(raw10||"").replace(/\D/g,"").slice(0,10);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `(${d.slice(0,3)}) ${d.slice(3)}`;
+    return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  }
+  function mountNumpad(forInputId){
+    const host = document.querySelector(`[data-for="${forInputId}"]`);
+    const input = document.getElementById(forInputId);
+    if(!host || !input) return;
+
+    // clear any previously mounted pad
+    host.innerHTML = "";
+
+    // keep system keyboard hidden
+    input.setAttribute("readonly","readonly");
+    input.addEventListener("focus", () => { input.setAttribute("readonly","readonly"); });
+
+    const makeKey = (label, cls="", onTap=null) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = `nkey ${cls}`; b.textContent = label;
+      b.addEventListener("click", () => onTap && onTap());
+      return b;
+    };
+
+    function setDigits(newDigits){
+      const cleaned = String(newDigits||"").replace(/\D/g,"").slice(0,10);
+      input.dataset.digits = cleaned;
+      input.value = formatPhonePretty(cleaned);
+      input.dispatchEvent(new Event("input", {bubbles:true}));
+    }
+
+    // seed with existing value (if any)
+    setDigits(input.dataset.digits || digits10(input.value||""));
+
+    // build pad grid
+    const grid = document.createElement("div");
+    grid.className = "numpad";
+    host.appendChild(grid);
+
+    const push  = (n) => () => setDigits((input.dataset.digits||"") + String(n));
+    const back  = () => setDigits((input.dataset.digits||"").slice(0,-1));
+    const clear = () => setDigits("");
+
+    [1,2,3,4,5,6,7,8,9].forEach(n=> grid.appendChild(makeKey(String(n), "", push(n))));
+    grid.appendChild(makeKey("C", "muted", clear));
+    grid.appendChild(makeKey("0", "", push(0)));
+    grid.appendChild(makeKey("⌫", "muted", back));
+  }
+
+
+
+  /* =============================== [SECTION: CLOUD SYNC] (sometimes changes) =============================== */
+  /* JSONP (for Apps Script) */
+  function jsonp(url){
+    return new Promise(res=>{
+      const cb='cb_'+Math.random().toString(36).slice(2);
+      window[cb]=r=>{ try{delete window[cb]}catch(e){} script.remove(); res(r); };
+      const script=document.createElement('script');
+      script.src = url + (url.includes('?')?'&':'?') + 'callback='+cb;
+      script.onerror = ()=>{ try{delete window[cb]}catch(e){} script.remove(); res({ok:false}); };
+      document.body.appendChild(script);
+    });
+  }
+  const loadCloud = ()=>jsonp(`${SYNC_URL}?action=load`);
+  const saveMembersCloud = (m)=>jsonp(`${SYNC_URL}?action=saveMembers&data=${encodeURIComponent(JSON.stringify(m))}`);
+  const saveScheduleCloud = (s)=>jsonp(`${SYNC_URL}?action=saveSchedule&data=${encodeURIComponent(JSON.stringify(s))}`);
+
+  function logCheckin(phone, name, classesCsv) {
+    const u = `${SYNC_URL}?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}&classes=${encodeURIComponent(classesCsv)}`;
+    return jsonp(u).then(r => !!(r && r.ok));
+  }
+
+  function setSyncBadge(state,msg){
+    const b=$("#syncBadge"); if(!b) return;
+    if(state==="ok"){ b.textContent=msg||"Synced ✓"; b.className="sync-badge sync-ok"; }
+    else if(state==="bad"){ b.textContent=msg||"Offline"; b.className="sync-badge sync-bad"; }
+    else { b.textContent="…"; b.className="sync-badge"; }
+  }
+
+  /* =============================== [SECTION: GHL WEBHOOK HELPER] =============================== */
+  /** Member check-in webhook (GHL) */
+  const GHL_WEBHOOK_MEMBER_URL =
+    "https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/73c401de-04b7-477b-b7c6-8efa0792a5a3";
+
+  function sendGHLMemberCheckin({ phone, name, classes }) {
+    if (!GHL_WEBHOOK_MEMBER_URL || !phone) return;
+
+    const qp = new URLSearchParams();
+    qp.set("evt", "member_checkin");
+    qp.set("phone", String(phone).replace(/\D/g,"").slice(-10));
+    if (name) qp.set("name", name);
+
+    // Always send class1..class5
+    const arr = Array.isArray(classes) ? classes.slice(0, 5) : [];
+    while (arr.length < 5) arr.push("");
+    for (let i = 0; i < 5; i++) qp.set(`class${i+1}`, arr[i]);
+
+    // Extras
+    qp.set("classCount", String((classes || []).length));
+    qp.set("classesCsv", (classes || []).join(", "));
+    qp.set("ts", String(Date.now()));
+
+    let sent = false;
+    try {
+      if (navigator.sendBeacon) {
+        const body = new URLSearchParams(qp);
+        sent = navigator.sendBeacon(GHL_WEBHOOK_MEMBER_URL, body);
+      }
+    } catch (_) {}
+
+    if (!sent) {
+      try {
+        const img = new Image();
+        img.referrerPolicy = "no-referrer";
+        img.src = `${GHL_WEBHOOK_MEMBER_URL}?${qp.toString()}`;
+      } catch (_) {}
+    }
+
+    try { if (typeof DEV !== "undefined" && DEV) console.log("[GHL] Sent member check-in", Object.fromEntries(qp)); } catch (_){}
+  }
+
+
+  /* =============================== [SECTION: DROP-IN WEBHOOK HELPER] =============================== */
+  // Helper to extract a name from potentially nested webhook responses
+  function extractNameDeep(obj){
+    const result = { name: "", firstName: "", lastName: "" };
+    const seen = new Set();
+    function pick(o){
+      if(!o || typeof o !== 'object' || seen.has(o)) return;
+      seen.add(o);
+      const nameFields = ['name','fullName','full_name','displayName'];
+      for (const k of nameFields){
+        const v = o[k];
+        if (typeof v === 'string' && v.trim()){ result.name ||= v.trim(); }
+      }
+      const fn = o.firstName || o.first_name || o.firstname;
+      const ln = o.lastName  || o.last_name  || o.lastname;
+      if (!result.firstName && typeof fn === 'string' && fn.trim()) result.firstName = fn.trim();
+      if (!result.lastName  && typeof ln === 'string' && ln.trim()) result.lastName  = ln.trim();
+
+      // Recurse into common containers/keys
+      const children = [o.contact, o.person, o.customer, o.user, o.data, o.payload, o.result, o.response];
+      children.forEach(pick);
+      if (Array.isArray(o.items)) o.items.forEach(pick);
+      if (Array.isArray(o.bundles)) o.bundles.forEach(b=> pick(b && (b.payload || b.data || b)));
+      if (Array.isArray(o)) o.forEach(pick);
+    }
+    pick(obj);
+    if (!result.name){
+      const full = `${result.firstName} ${result.lastName}`.trim();
+      if (full) result.name = full;
+    }
+    return result;
+  }
+
+  // Uses Make.com to verify if a phone is an existing drop-in. Returns {exists, name, firstName, lastName}
+  const MAKE_WEBHOOK_URL = "https://hook.us1.make.com/7o1igxij7s24myaep5mtc5k6fvxunqh8";
+  async function verifyDropIn(phone, { timeoutMs = 8000 } = {}){
+    try {
+      const d = String(phone||"").replace(/\D/g, "").slice(-10);
+      if (d.length !== 10) return { exists:false };
+
+      const u = new URL(MAKE_WEBHOOK_URL);
+      u.searchParams.set("product", "checkdrop");
+      u.searchParams.set("phone", d);
+
+      // Debug
+      try { if (typeof DEV !== "undefined" && DEV) console.log("[DROP] →", u.toString()); } catch(_){ }
+
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
+
+      const resp = await fetch(u.toString(), { method: "GET", signal: ctrl.signal, cache: "no-store" });
+      clearTimeout(to);
+
+      if (!resp.ok) {
+        try { if (DEV) console.warn("[DROP] non-200", resp.status); } catch(_){ }
+        return { exists:false };
+      }
+
+      const ct = resp.headers.get("content-type") || "";
+      let data;
+      if (ct.includes("application/json")) {
+        data = await resp.json();
+      } else {
+        const txt = await resp.text();
+        try { data = JSON.parse(txt); } catch { data = { result: (txt||"").trim().toLowerCase() }; }
+      }
+
+      const exists = !!(data && (data.result === "yes" || data.ok === true));
+      const { name, firstName, lastName } = extractNameDeep(data);
+      try { if (DEV) console.log("[DROP] resp", data, "→ exists:", exists, "name:", name, firstName, lastName); } catch(_){ }
+      return { exists, name, firstName, lastName };
+    } catch (err) {
+      try { if (DEV) console.error("[DROP] verify error", err); } catch(_){ }
+      return { exists:false };
+    }
+  }
+
+
+  /* =============================== [SECTION: RIPPLE + ACTION DELAY] (rarely changes) =============================== */
+  let rippleBlockUntil = 0;
+  function spawnRippleFromEvent(ev, target){
+    if(!RIPPLE) return;
+    if(Date.now() < rippleBlockUntil) return;
+    if(!target || target.offsetParent === null) return;
+    const rect = target.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const clientX = (ev.touches && ev.touches[0]?.clientX) ?? ev.clientX ?? (rect.left + rect.width/2);
+    const clientY = (ev.touches && ev.touches[0]?.clientY) ?? ev.clientY ?? (rect.top  + rect.height/2);
+    const x = clientX - rect.left - size/2;
+    const y = clientY - rect.top  - size/2;
+    const r = document.createElement('span');
+    r.className = 'ripple'; r.style.width = r.style.height = size + 'px';
+    r.style.left = x + 'px'; r.style.top  = y + 'px';
+    target.appendChild(r); r.addEventListener('animationend', () => r.remove());
+  }
+  if (RIPPLE){
+    document.addEventListener('pointerdown', (e)=>{
+      const t = e.target.closest('.btn, .chip, .nkey'); if (!t) return;
+      spawnRippleFromEvent(e, t);
+    }, {passive:true});
+  }
+  function withRippleDelay(el, action, delay=140){
+    if(!el) return; // guard if element not found
+    el.addEventListener('click', ()=>{
+      if (RIPPLE && !DEV){
+        rippleBlockUntil = Date.now() + delay + 240;
+        setTimeout(action, delay);
+      } else {
+        action(); // instant in DEV
+      }
+    });
+  }
+
+  // Loading dots helpers (used on Next buttons)
+  function showPulsingDots(btn){
+    if(!btn) return;
+    // clear any prior
+    try{ removePulsingDots(btn); }catch(_){}
+    const span = document.createElement('span');
+    span.className = 'loading-dots';
+    const frames = ['•','••','•••'];
+    let i = 0;
+    span.textContent = frames[i];
+    const timer = setInterval(()=>{ i = (i+1) % frames.length; span.textContent = frames[i]; }, 280);
+    btn.appendChild(span);
+    btn._dotsTimer = timer;
+    btn._dotsEl = span;
+  }
+  function removePulsingDots(btn, label){
+    if(!btn) return;
+    if(btn._dotsTimer){ try{ clearInterval(btn._dotsTimer); }catch(_){ } btn._dotsTimer = 0; }
+    if(btn._dotsEl && btn._dotsEl.remove) btn._dotsEl.remove();
+    if(typeof label === 'string') btn.textContent = label;
+  }
+
+
+
+  /* =============================== [SECTION: APP BOOT + HTML] (rarely changes) =============================== */
+  document.addEventListener("DOMContentLoaded", async ()=>{
+    document.getElementById("app").innerHTML = `
+      <div class="stage"><div class="stack">
+        <!-- ========== [SECTION: SCREEN – WELCOME] (UI text changes) ========== -->
+        <div id="scr-welcome" class="screen show">
+          <div class="brand">${LOGO_URL?`<img src="${LOGO_URL}" alt="logo" onerror="this.style.display='none'">`:""}</div>
+          <h1>WELCOME TO<br>MSBD STUDIO</h1>
+          <p class="sub">Check in below <span class="gold-icon">↓</span></p>
+          <div style="display:grid; gap:14px; width:min(760px,100%); margin:0 auto;">
+            <button id="btnDropin" class="btn btn-gold">🎟 Drop-In Check-In</button>
+            <button id="btnMember" class="btn btn-dark">
+              <svg class="gold-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26">
+                <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+              </svg>
+              Member Check-In
+            </button>
+          </div>
+        </div>
+
+        <!-- ========== [SECTION: SCREEN – DROP-IN PHONE] (often changes) ========== -->
+        <div id="scr-drop" class="screen">
+          <h2 style="margin:10px 0 6px;font-size:clamp(24px,5.4vw,40px);font-weight:900;">Drop-In Phone Number</h2>
+          <p class="sub" style="margin:0 0 14px;">Type your number.</p>
+
+          <input id="inpDrop" class="input" type="tel" placeholder="(555) 123-4567" inputmode="none" readonly>
+          <div id="padDrop" class="pad-host" data-for="inpDrop"></div>
+
+          <div style="display:grid; gap:10px; width:min(760px,100%); margin:16px auto 0;">
+            <button id="btnDropNext" class="btn btn-gold">Next</button>
+          </div>
+
+          <div id="dropNotFound" class="nf">
+            <div id="dropErr" class="nf-text error-message">We didn’t find that number.</div>
+            <div id="dropBtns" class="nf-actions secondary-buttons">
+              <button id="btnDropImNew" class="btn btn-gold btn-sm">I’m new</button>
+              <button id="btnDropRetry" class="btn btn-dark btn-sm">Try again</button>
+            </div>
+          </div>
+
+          <div style="display:grid; gap:10px; width:min(760px,100%); margin:10px auto 0;">
+            <button id="backDrop" class="btn btn-dark back-button">← Back</button>
+          </div>
+
+          <p id="msgDrop" style="display:none;color:#ff9aa1;margin-top:8px;"></p>
+        </div>
+
+        <!-- ========== [SECTION: SCREEN – MEMBER PHONE] (often changes) ========== -->
+        <div id="scr-phone" class="screen">
+          <h2 style="margin:10px 0 6px;font-size:clamp(24px,5.4vw,40px);font-weight:900;">Member Phone Number</h2>
+          <p class="sub" style="margin:0 0 14px;">Type your number.</p>
+          <input id="inpPhone" class="input" type="tel" placeholder="(555) 123-4567" inputmode="none" readonly>
+          <div id="padPhone" class="pad-host" data-for="inpPhone"></div>
+
+          <div style="display:grid; gap:14px; width:min(760px,100%); margin:16px auto 0%;">
+            <button id="btnNext" class="btn btn-gold">Next</button>
+            <button id="back1" class="btn btn-dark">← Back</button>
+          </div>
+          <p id="msgPhone" style="display:none;color:#ff9aa1;margin-top:10px;"></p>
+        </div>
+
+            <!-- ========== [SECTION: SCREEN – MEMBER CLASSES] (often changes) ========== -->
+        <div id="scr-classes" class="screen">
+          <div class="greet-row">
+            <div id="profileBubble" class="profile-bubble">ME</div>
+            <div class="greet-text">
+              <h2 id="hello" class="greet">Welcome back</h2>
+              <div class="meta-line">
+                <span id="classesPill" class="pill-soft"></span>
+                <span class="sep">•</span>
+                <span class="meta">Pick today’s classes</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="classList" class="class-pills"></div>
+
+          <div class="cta-bar">
+            <div class="hint-row">
+              <span class="hint">Selected: <span class="count" id="selCount">0</span></span>
+            </div>
+            <button id="btnCheck" class="btn btn-gold btn-cta">Check In</button>
+            <button id="back2" class="btn btn-dark">← Back</button>
+            <div class="minor-row"><button id="btnNotMeClasses" class="link-btn">Not me</button></div>
+          </div>
+
+          <p id="msgClass" style="display:none;color:#ff9aa1;margin-top:10px;"></p>
+        </div>
+
+  <!-- ========== [SECTION: SCREEN – SUCCESS] (text/timer changes) ========== -->
+  <div id="scr-done" class="screen">
+    <h2 id="doneTitle" style="font-size:clamp(26px,6vw,44px);margin:0 0 10px;font-weight:900;color:#a7f3c1">
+      You’re checked in! ✅
+    </h2>
+    <p id="doneDetail" style="color:#d1d5db"></p>
+    <p class="sub" style="margin:8px 0 18px;">Going back in <b id="countdown">5</b>…</p>
+    <div style="display:grid; gap:14px; width:min(480px,100%); margin:0 auto;">
+      <button id="btnDone" class="btn btn-gold">Done</button>
+    </div>
+  </div>
+
+
+
+        <!-- ========== [SECTION: SCREEN – ADMIN FAB + MODAL] (sometimes changes) ========== -->
+        <button id="adminFab" title="Admin"
+          style="position:fixed;right:16px;bottom:16px;width:56px;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:#0f0f10;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.6)">⚙️</button>
+
+        <div id="adminModal">
+          <div id="adminPanel">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <h3 style="margin:0;font-size:20px;font-weight:800;color:#f3f4f6;">Admin</h3>
+              <span id="syncBadge" class="sync-badge">…</span>
+            </div>
+            <p style="margin:6px 0 8px;opacity:.8;font-size:14px;color:#c9cacc">Enter PIN. Save goes to the cloud.</p>
+
+            <div class="admin-row">
+              <input id="adminPin" type="password" placeholder="PIN" style="padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#0f1012;color:#fff">
+              <button id="adminUnlock" class="icon-btn add-btn">Unlock</button>
+              <span id="pinMsg" style="color:#ff9aa1;display:none">Wrong PIN</span>
+              <button id="adminClose" class="icon-btn del-btn" style="margin-left:auto;">Close</button>
+            </div>
+
+            <div id="adminBody" style="display:none">
+              <div class="admin-section">
+                <h4 style="margin:4px 0 6px;color:#eee">Schedule</h4>
+                <div id="scheduleGrid"></div>
+                <div class="admin-row" style="justify-content:flex-end">
+                  <button id="saveSchedule" class="icon-btn add-btn">Save Schedule</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    /* =============================== [SECTION: CLOUD LOAD ON START] (rarely changes) =============================== */
+    setSyncBadge("bad","Offline");
+    try{
+      const r = await loadCloud();
+      if(r && r.ok){
+        if(Array.isArray(r.members) && r.members.length){ MEMBERS = r.members; }
+        if(r.schedule && typeof r.schedule === "object"){ SCHEDULE = r.schedule; }
+        setSyncBadge("ok","Synced ✓");
+      } else { }
+    }catch(_){ setSyncBadge("bad","Offline"); }
+
+    /* =============================== [SECTION: STATE + SCREEN SWAP] (rarely changes) =============================== */
+    let current = { phone:"", name:"" };
+    let selected = new Set();
+    const swap = id => { ["scr-welcome","scr-drop","scr-phone","scr-classes","scr-done"].forEach(k=>$("#"+k).classList.remove("show")); $("#"+id).classList.add("show"); };
+
+    /* =============================== [SECTION: HOME BUTTONS] (often changes) =============================== */
+    withRippleDelay(document.getElementById('btnDropin'), ()=> swap('scr-drop'));
+    withRippleDelay(document.getElementById('btnMember'), ()=> swap('scr-phone'));
+
+    /* =============================== [SECTION: NUMPAD MOUNT] (rarely changes) =============================== */
+    mountNumpad("inpDrop");
+    mountNumpad("inpPhone");
+
+     /* =============================== [SECTION: DROP-IN LOGIC] (often changes) =============================== */
+    function resetDropInput(){
+      const box = $("#inpDrop");
+      box.value = ""; box.dataset.digits = "";
+    }
+
+    withRippleDelay(document.getElementById('backDrop'), ()=>{
+      resetDropInput();
+      $("#dropNotFound").classList.remove("open");
+      $("#dropErr").classList.remove("reveal");
+      $("#dropBtns").classList.remove("reveal");
+      $("#backDrop").classList.remove("shrink");
+      swap('scr-welcome');
+    });
+
+    // Bind Member Phone back button → Welcome
+    withRippleDelay(document.getElementById('back1'), ()=>{
+      const box = $("#inpPhone"); if(box){ box.value=''; box.dataset.digits=''; }
+      const msg = $("#msgPhone"); if(msg) msg.style.display = 'none';
+      swap('scr-welcome');
+    });
+
+    document.addEventListener('input', (e)=>{
+      if(e.target && e.target.id === 'inpDrop'){ $("#msgDrop").style.display="none"; }
+    }, {passive:true});
+
+    // NEXT from drop-in keypad
+    withRippleDelay(document.getElementById('btnDropNext'), async () => {
+      const d = digits10($("#inpDrop").value);
+      const box = $("#inpDrop");
+
+      if (d.length !== 10) {
+        $("#msgDrop").textContent = "Please type a full 10-digit number.";
+        $("#msgDrop").style.display = "block";
+        box.classList.add("input-error"); setTimeout(()=>box.classList.remove("input-error"), 400);
+        return;
+      }
+      const btn=$("#btnDropNext");
+      btn.classList.add("btn-disabled");
+      showPulsingDots(btn);
+
+      const result = await verifyDropIn(d);
+
+      removePulsingDots(btn, "Next");
+      btn.classList.remove("btn-disabled");
+
+      if (result.exists) {
+        // Redirect to drop-in options page, include multiple name params when available
+        const backUrl = encodeURIComponent(window.location.href.split('#')[0]);
+        const qp = new URLSearchParams({ phone: d, found: "1", back: backUrl });
+        if (result.name) qp.set("name", result.name);
+        const url = `${DROPIN_RETURN_URL}?${qp.toString()}`;
+        window.location.href = url;
+      } else {
+        // Show "Not found" state
+        const nf = $("#dropNotFound");
+        nf.dataset.phone = d; nf.classList.add("open");
+        $("#dropErr").classList.add("reveal"); $("#dropBtns").classList.add("reveal");
+        $("#backDrop").classList.add("shrink");
+      }
+    });
+
+    // "I'm new" / "Try again"
+    document.getElementById('btnDropImNew').addEventListener('click', ()=>{
+      const d = $("#dropNotFound").dataset.phone || digits10($("#inpDrop").value);
+      const popup = document.createElement('div');
+      popup.id = 'newUserPopup';
+      popup.style = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      `;
+      popup.innerHTML = `
+        <div style="background: #141519; padding: 20px; border-radius: 12px; max-width: 400px; width: 100%; text-align: center;">
+          <h3 style="color: #f3f4f6; margin-bottom: 10px;">Welcome! Let’s get started</h3>
+          <input id="firstName" class="input" placeholder="First Name" style="margin-bottom: 10px; width: calc(100% - 40px);">
+          <input id="lastName" class="input" placeholder="Last Name" style="margin-bottom: 10px; width: calc(100% - 40px);">
+          <input id="email" class="input" placeholder="Email" style="margin-bottom: 20px; width: calc(100% - 40px);">
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="popupContinue" class="btn btn-gold">Continue</button>
+            <button id="popupCancel" class="btn btn-dark">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(popup);
+
+      document.getElementById('popupCancel').onclick = () => {
+        popup.remove();
+      };
+
+      document.getElementById('popupContinue').onclick = async () => {
+        const firstName = document.getElementById('firstName');
+        const lastName = document.getElementById('lastName');
+        const email = document.getElementById('email');
+
+        let hasError = false;
+
+        [firstName, lastName, email].forEach(field => {
+          if (!field.value.trim()) {
+            field.classList.add('input-error');
+            setTimeout(() => field.classList.remove('input-error'), 400);
+            hasError = true;
+          }
+        });
+
+        if (hasError) return;
+
+        const webhookUrl = "https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/d94d472b-aaf4-478a-83f6-b55375fd7258";
+        const payload = {
+          phone: d,
+          firstName: firstName.value.trim(),
+          lastName: lastName.value.trim(),
+          email: email.value.trim()
+        };
+
+        try {
+          await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        } catch (error) {
+          console.error("Failed to send data to webhook", error);
+          alert("There was an error adding you to the system. Please try again.");
+          return;
+        }
+
+        const url = `${DROPIN_RETURN_URL}?phone=${encodeURIComponent(d)}&name=${encodeURIComponent(firstName.value.trim())}`;
+        window.location.href = url;
+      };
+    });
+
+
+
+    /* =============================== [SECTION: ADMIN PANEL] (sometimes changes) =============================== */
+    const adminFab=$("#adminFab"), adminModal=$("#adminModal");
+    const adminPin=$("#adminPin"), adminUnlock=$("#adminUnlock"), pinMsg=$("#pinMsg");
+    const adminBody=$("#adminBody"), adminClose=$("#adminClose");
+    const scheduleGrid=$("#scheduleGrid"), saveSchedule=$("#saveSchedule");
+    // Removed members admin UI; guard against any legacy references
+
+    adminFab.onclick=()=>{ adminModal.style.display="flex"; document.body.style.overflow="hidden"; pinMsg.style.display="none"; adminBody.style.display="none"; adminPin.value=""; adminPin.focus(); };
+    adminClose.onclick=()=>{ adminModal.style.display="none"; document.body.style.overflow=""; };
+
+    adminUnlock.onclick=()=>{
+      if(adminPin.value===ADMIN_PIN){
+        pinMsg.style.display="none"; adminBody.style.display="block";
+        // Only render schedule editor now
+        renderScheduleEditor();
+      }else{ pinMsg.style.display="inline"; adminBody.style.display="none"; }
+    };
+
+    function renderScheduleEditor(){
+      const DAY_LABEL={sun:"Sunday",mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday"};
+      scheduleGrid.innerHTML = DAY_KEYS.map(k=>{
+        const items = (SCHEDULE[k]||[]).map((c,i)=>rowHTML(k,i,c)).join("");
+        return `<div class="day-card" data-day="${k}">
+          <div class="day-header">
+            <strong>${DAY_LABEL[k]}</strong>
+            <button class="icon-btn add-btn" data-add="${k}">+ Add Class</button>
+          </div>
+          <div class="day-rows" id="rows-${k}">${items || rowHTML(k,0,"")}</div>
+        </div>`;
+      }).join("");
+
+      scheduleGrid.onclick = (e)=>{
+        const addDay = e.target.getAttribute?.("data-add");
+        const delKey = e.target.getAttribute?.("data-del");
+        if(addDay){
+          const box=$("#rows-"+addDay); const idx=box.querySelectorAll(".class-row").length;
+          box.insertAdjacentHTML("beforeend", rowHTML(addDay,idx,""));
+        }
+        if(delKey){
+          const [day,idx]=delKey.split(":");
+          const row=scheduleGrid.querySelector(`.class-row[data-key="${day}:${idx}"]`);
+          if(row) row.remove();
+        }
+      };
+    }
+    function rowHTML(day,idx,val){
+      const v=String(val||"").replace(/"/g,"&quot;");
+      return `<div class="class-row" data-key="${day}:${idx}">
+        <input type="text" placeholder="e.g., Salsa 6:00" value="${v}">
+        <button class="icon-btn del-btn" data-del="${day}:${idx}">Remove</button>
+      </div>`;
+    }
+
+    // Remove legacy members save handler (UI removed)
+
+    saveSchedule.onclick = async ()=>{
+      const next={sun:[],mon:[],tue:[],wed:[],thu:[],fri:[],sat:[]};
+      DAY_KEYS.forEach(k=>{
+        document.querySelectorAll(`#rows-${k} .class-row input`).forEach(inp=>{
+          const v=inp.value.trim(); if(v) next[k].push(v);
+        });
+      });
+      SCHEDULE = next;
+      const r = await saveScheduleCloud(SCHEDULE); if(r && r.ok) setSyncBadge("ok","Synced ✓"); else setSyncBadge("bad","Offline");
+    };
+
+    /* =============================== [SECTION: MEMBER VERIFY VIA MAKE.COM] =============================== */
+    async function verifyMember(phone, { timeoutMs = 8000 } = {}){
+      try{
+        const d = String(phone||"").replace(/\D/g, "").slice(-10);
+        if(d.length!==10) return { exists:false };
+        const u = new URL(MAKE_WEBHOOK_URL);
+        u.searchParams.set("product","checkmember");
+        u.searchParams.set("phone", d);
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
+        const resp = await fetch(u.toString(), { method:"GET", signal: ctrl.signal, cache:"no-store" });
+        clearTimeout(to);
+        if(!resp.ok) return { exists:false };
+        const ct = resp.headers.get("content-type")||"";
+        let data; let rawText="";
+        if(ct.includes("application/json")){
+          data = await resp.json();
+        } else {
+          rawText = await resp.text();
+          try{ data = JSON.parse(rawText); }
+          catch{ data = { result:(rawText||"").trim() , _raw: rawText}; }
+        }
+
+        // Determine existence robustly
+        let exists = false;
+        if (data) {
+          const r = (typeof data.result === 'string') ? data.result.toLowerCase() : data.result;
+          exists = (r === 'yes') || (typeof r === 'string' && /\byes\b/.test(r)) || data.ok === true || data.exists === true;
+        }
+        if (!exists && rawText) {
+          const lower = rawText.toLowerCase();
+          if (/\byes\b/.test(lower)) exists = true; // tolerate malformed text bodies that contain 'yes'
+        }
+
+        const nameInfo = extractNameDeep(data||{});
+        const classesTaken = Number((data && (data.classesTaken ?? data.classcount ?? data.classCount)) || 0) || 0;
+        return { exists, name: nameInfo.name, classesTaken };
+      }catch(_){ return { exists:false }; }
+    }
+
+    // NEXT from member keypad → use Make.com
+    withRippleDelay(document.getElementById('btnNext'), async () => {
+      const d = digits10($("#inpPhone").value);
+      const box = $("#inpPhone");
+
+      if (d.length !== 10) {
+        $("#msgPhone").textContent = "Please type a full 10-digit number.";
+        $("#msgPhone").style.display = "block";
+        box.classList.add("input-error"); setTimeout(()=>box.classList.remove("input-error"), 400);
+        return;
+      }
+
+      // Disable Next and show dots while verifying
+      const btn = document.getElementById('btnNext');
+      btn.classList.add('btn-disabled');
+      const originalLabel = btn.textContent; btn.textContent=""; showPulsingDots(btn);
+
+      const result = await verifyMember(d);
+
+      // Debug log
+      try{ if (typeof DEV !== 'undefined' && DEV) console.log('[MEMBER] verify result', result); }catch(_){ }
+
+      removePulsingDots(btn, originalLabel); btn.classList.remove('btn-disabled');
+
+      if(!result.exists){
+        $("#msgPhone").textContent = "We didn’t find that number.";
+        $("#msgPhone").style.display = "block";
+        box.classList.add("input-error"); setTimeout(()=>box.classList.remove("input-error"), 400);
+        return;
+      }
+
+      // Success → go to classes with premium UI
+      try {
+        current.phone = d;
+        current.name  = result.name || "Member";
+        $("#hello").textContent = `Welcome back, ${current.name}`;
+        // initials - just first initial
+        const getInitials = name => { const p=String(name||"").split(/\s+/).filter(Boolean); return p[0] ? p[0][0] : "M"; };
+        const pb = $("#profileBubble"); if(pb) pb.textContent = getInitials(current.name).toUpperCase();
+        // classes pill with count-up animation
+        const classesTaken = Number(result.classesTaken)||0; 
+        const pill=$("#classesPill"); 
+        if(pill) countUpClasses(pill, classesTaken, 3000);
+        $("#selCount").textContent = "0";
+        swap('scr-classes');
+
+        // Render chips (no checkbox icon, left accent on select)
+        const classListEl = $("#classList");
+        if(classListEl){
+          classListEl.innerHTML = ""; selected.clear();
+          (SCHEDULE[todayKey()] || []).forEach(cls => {
+            const b = document.createElement("button");
+            b.className = "chip";
+            b.innerHTML = `
+              <div class="row">
+                <span class="icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span class="label">${cls}</span>
+              </div>
+              <span class="right">Tap to select</span>
+            `;
+            b.onclick = () => {
+              const picked = b.classList.toggle("sel");
+              if(picked) selected.add(cls); else selected.delete(cls);
+              const sel = $("#selCount"); if(sel) sel.textContent = String(selected.size);
+              const right=b.querySelector('.right'); if(right) right.textContent = picked?"Selected":"Tap to select";
+            };
+            classListEl.appendChild(b);
+          });
+        }
+
+        swap("scr-classes");
+      } catch (err){
+        console.error('[MEMBER] UI update error', err);
+        $("#msgPhone").textContent = "An internal error occurred. Please tell staff.";
+        $("#msgPhone").style.display = 'block';
+      }
+    });
+
+    /* =============================== [SECTION: CLASSES SCREEN NAV BUTTONS] =============================== */
+    // Bind classes screen nav buttons after HTML injected
+    const back2El = document.getElementById('back2');
+    if (back2El) withRippleDelay(back2El, () => { swap('scr-phone'); });
+
+    const notMeEl = document.getElementById('btnNotMeClasses');
+    if (notMeEl) {
+      notMeEl.addEventListener('click', () => {
+        selected.clear();
+        const classListEl = document.getElementById('classList');
+        if (classListEl) classListEl.querySelectorAll('.chip.sel').forEach(el=>el.classList.remove('sel'));
+        const box = document.getElementById('inpPhone');
+        if (box) { box.value=''; box.dataset.digits=''; }
+        const msg = document.getElementById('msgPhone');
+        if (msg) msg.style.display = 'none';
+        swap('scr-phone');
+      });
+    }
+
+    /* =============================== [SECTION: ANIMATIONS] =============================== */
+    // Ultra-smooth adaptive curve that adjusts based on class count
+    function smoothDramaticSlowdown(t, targetNumber) {
+      // Adaptive curve strength based on class count
+      let curveStrength;
+      if (targetNumber < 20) {
+        curveStrength = 1.8; // Gentle curve for small numbers
+      } else if (targetNumber < 50) {
+        curveStrength = 2.2; // Medium curve
+      } else if (targetNumber < 100) {
+        curveStrength = 2.6; // Stronger curve
+      } else {
+        curveStrength = 3.0; // Strongest curve for large numbers
+      }
+      
+      // Single ultra-smooth curve using sine-based easing
+      // This creates a natural acceleration then deceleration without jarring transitions
+      const sineEase = Math.sin(t * Math.PI * 0.5); // 0 to π/2 gives smooth S-curve
+      const powerEase = Math.pow(sineEase, curveStrength);
+      
+      // Blend between linear and power curve based on progress
+      // Early: more linear (fast), Late: more curved (dramatic slowdown)
+      const blendFactor = Math.pow(t, 0.7); // Gradual transition to dramatic
+      return t * (1 - blendFactor) + powerEase * blendFactor;
+    }
+    
+    function countUpClasses(element, targetNumber, duration = 3000) {
+      if (!element || targetNumber === 0) {
+        if (element) element.textContent = '0 classes';
+        return;
+      }
+      
+      const startTime = performance.now();
+      element.textContent = '0 classes';
+      
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Apply ultra-smooth dramatic slowdown easing
+        const easedProgress = smoothDramaticSlowdown(progress, targetNumber);
+        const currentCount = Math.floor(targetNumber * easedProgress);
+        
+        element.textContent = `${currentCount} ${currentCount === 1 ? 'class' : 'classes'}`;
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    /* =============================== [SECTION: CHECK IN BUTTON] =============================== */
+    // Wire up the Check In button for member classes screen
+    withRippleDelay(document.getElementById('btnCheck'), async () => {
+      if (selected.size === 0) {
+        const msg = document.getElementById('msgClass');
+        if (msg) { 
+          msg.textContent = 'Please select at least one class.'; 
+          msg.style.display = 'block'; 
+          setTimeout(() => msg.style.display = 'none', 2600); 
+        }
+        return;
+      }
+
+      const btn = document.getElementById('btnCheck');
+      const original = btn ? btn.textContent : '';
+      if (btn) { 
+        btn.classList.add('btn-disabled'); 
+        btn.disabled = true; 
+        btn.textContent = ''; 
+        showPulsingDots(btn); 
+      }
+
+      const classes = Array.from(selected);
+
+      try {
+        await sendGHLMemberCheckin({ phone: current.phone, name: current.name, classes });
+        await logCheckin(current.phone, current.name, classes.join(', '));
+
+        const detail = document.getElementById('doneDetail');
+        if (detail) detail.textContent = `Checked in for: ${classes.join(', ')}`;
+        swap('scr-done');
+
+        let t = COUNTDOWN_SEC; 
+        const cd = document.getElementById('countdown'); 
+        if (cd) cd.textContent = String(t);
+        
+        const timer = setInterval(() => {
+          t -= 1; 
+          if (cd) cd.textContent = String(Math.max(0, t));
+          if (t <= 0) { 
+            clearInterval(timer); 
+            window.location.href = HOME_URL; 
+          }
+        }, 1000);
+
+        withRippleDelay(document.getElementById('btnDone'), () => { 
+          try { clearInterval(timer); } catch(_) { } 
+          window.location.href = HOME_URL; 
+        });
+      } catch (err) {
+        console.error('[CHECKIN] failed', err);
+        alert('There was an error during check-in. Please try again.');
+        if (btn) { 
+          removePulsingDots(btn, original || 'Check In'); 
+          btn.classList.remove('btn-disabled'); 
+          btn.disabled = false; 
+        }
+      }
+    });
+    
+    function renderScheduleEditor(){
+      const DAY_LABEL={sun:"Sunday",mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday"};
+      scheduleGrid.innerHTML = DAY_KEYS.map(k=>{
+        const items = (SCHEDULE[k]||[]).map((c,i)=>rowHTML(k,i,c)).join("");
+        return `<div class="day-card" data-day="${k}">
+          <div class="day-header">
+            <strong>${DAY_LABEL[k]}</strong>
+            <button class="icon-btn add-btn" data-add="${k}">+ Add Class</button>
+          </div>
+          <div class="day-rows" id="rows-${k}">${items || rowHTML(k,0,"")}</div>
+        </div>`;
+      }).join("");
+
+      scheduleGrid.onclick = (e)=>{
+        const addDay = e.target.getAttribute?.("data-add");
+        const delKey = e.target.getAttribute?.("data-del");
+        if(addDay){
+          const box=$("#rows-"+addDay); const idx=box.querySelectorAll(".class-row").length;
+          box.insertAdjacentHTML("beforeend", rowHTML(addDay,idx,""));
+        }
+        if(delKey){
+          const [day,idx]=delKey.split(":");
+          const row=scheduleGrid.querySelector(`.class-row[data-key="${day}:${idx}"]`);
+          if(row) row.remove();
+        }
+      };
+    }
+    function rowHTML(day,idx,val){
+      const v=String(val||"").replace(/"/g,"&quot;");
+      return `<div class="class-row" data-key="${day}:${idx}">
+        <input type="text" placeholder="e.g., Salsa 6:00" value="${v}">
+        <button class="icon-btn del-btn" data-del="${day}:${idx}">Remove</button>
+      </div>`;
+    }
+
+    // Remove legacy members save handler (UI removed)
+
+    saveSchedule.onclick = async ()=>{
+      const next={sun:[],mon:[],tue:[],wed:[],thu:[],fri:[],sat:[]};
+      DAY_KEYS.forEach(k=>{
+        document.querySelectorAll(`#rows-${k} .class-row input`).forEach(inp=>{
+          const v=inp.value.trim(); if(v) next[k].push(v);
+        });
+      });
+      SCHEDULE = next;
+      const r = await saveScheduleCloud(SCHEDULE); if(r && r.ok) setSyncBadge("ok","Synced ✓"); else setSyncBadge("bad","Offline");
+    };
+  });
+  </script>
+
+  <!-- =============================== [SECTION: STYLES – CTA BAR] =============================== -->
+  <style>
+    /* CTA Bar with Selected counter and Check In button */
+    .cta-bar{ width:min(860px,100%); margin:0 auto; }
+    .hint-row{ text-align:center; margin-bottom:16px; }
+    .hint{ color:var(--muted); font-weight:600; font-size:clamp(14px,3vw,18px); }
+    .hint .count{ color:var(--gold1); font-weight:800; }
+    
+    /* Make buttons match chip width exactly */
+    .cta-bar .btn{ 
+      width:min(860px,100%); 
+      margin:0 auto 10px; 
+      display:block;
+    }
+    .btn-cta{ min-height:60px; }
+  </style>
+
+  <!-- =============================== [SECTION: STYLES – PREMIUM CLASSES UI] =============================== -->
+  <style>
+    /* Premium Classes UI – frosted chips with gold ring on select */
+    .greet-row{ display:flex; align-items:center; gap:12px; width:min(860px,100%); margin:0 auto 14px; text-align:left; }
+    .greet-text .greet{ margin:0; font-size:clamp(22px,4.6vw,32px); font-weight:900; }
+    .greet-text .meta-line{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:clamp(12px,2.4vw,14px); }
+    .profile-bubble{ width:48px; height:48px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-weight:900; color:#1b1400; background:linear-gradient(180deg,var(--gold1),var(--gold2)); box-shadow: inset 0 -1px 0 rgba(0,0,0,.35); }
+    .pill-soft{ padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
+
+    .class-pills{ display:grid; gap:12px; width:min(860px,100%); margin:0 auto 24px; }
+
+    /* Base frosted look */
+    .chip{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.16); backdrop-filter:blur(8px) saturate(1.1); -webkit-backdrop-filter:blur(8px) saturate(1.1); }
+    .chip .row{ display:inline-flex; align-items:center; gap:10px; }
+    .chip .label{ display:inline-block; }
+    .chip .right{ display:block; font-weight:700; color:var(--muted); font-size:clamp(12px,2.6vw,14px); margin-top:6px; }
+
+    /* Check icon – keep small and subtle; reveal on select */
+    .chip .icon{ width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); color:#c9cacc; opacity:0; transform:scale(.85); transition:opacity .16s ease, transform .16s ease, border-color .2s, background .2s, color .2s; }
+    .chip .icon svg{ width:14px; height:14px; }
+
+    /* Selection ring turns gold; no full gold fill */
+    .chip.sel{ background:rgba(255,255,255,.06) !important; color:#eee !important; border-color:rgba(255,215,130,.7) !important; box-shadow:0 0 0 2px rgba(255,215,130,.18) inset; }
+    .chip.sel .icon{ opacity:1; transform:scale(1); color:var(--gold2); border-color:rgba(255,215,130,.6); background:rgba(255,215,130,.08); }
+  </style>
+</body>
+</html>
