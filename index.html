@@ -182,7 +182,7 @@
     location.hostname === '::1' ||
     location.protocol === 'file:'; // Auto toggle based on environment
 
-  const TEST = location.hostname === 'minneapolissalsabachatadance.com';
+  const TEST = location.hostname === 'test.tablet.msbdance.com';
 
   const CONFETTI = !DEV;
   const RIPPLE   = !DEV;
@@ -193,30 +193,30 @@
 /* === URLS (switch by DEV/TEST) ===
      - Main/home (where the tablet starts):
          DEV  → ./index.html
-         TEST → https://minneapolissalsabachatadance.com/new-tablet-home-page-908608
-         PROD → https://msbdance.com/tablet
+         TEST → https://test.tablet.msbdance.com/
+         PROD → https://tablet.msbdance.com/
      - Options page:
          DEV  → ./options.html
-         TEST → https://minneapolissalsabachatadance.com/new-tablet-non-member-options-page
-         PROD → https://minneapolissalsabachatadance.com/new-tablet-options-new
+         TEST → https://test.tablet.msbdance.com/options.html
+         PROD → https://tablet.msbdance.com/options.html
   */
   const HOME_URL = DEV
     ? "./index.html"
     : TEST
-    ? "https://minneapolissalsabachatadance.com/new-tablet-home-page-908608"
-    : "https://msbdance.com/tablet";
+    ? "https://test.tablet.msbdance.com/"
+    : "https://tablet.msbdance.com/";
 
   const DROPIN_RETURN_URL = DEV
     ? "./options.html"
     : TEST
-    ? "https://minneapolissalsabachatadance.com/new-tablet-non-member-options-page"
-    : "https://minneapolissalsabachatadance.com/new-tablet-options-new";
+    ? "https://test.tablet.msbdance.com/options.html"
+    : "https://tablet.msbdance.com/options.html";
 
   const MEMBER_RETURN_URL = DEV
     ? "./member-options.html"
     : TEST
-    ? "https://minneapolissalsabachatadance.com/new-tablet-member-options-page"
-    : "https://msbdance.com/tablet-member-options";
+    ? "https://test.tablet.msbdance.com/member-options.html"
+    : "https://tablet.msbdance.com/member-options.html";
 
   const DROPIN_NEW_URL = DROPIN_RETURN_URL;
 
