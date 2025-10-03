@@ -165,7 +165,7 @@
         const el=$("#cashOverlay");
         el.style.display="flex";
         try{confetti({particleCount:40,spread:50,origin:{y:.6}});}catch(_){}
-        $("#cashOk").onclick=()=>{location.href="https://msbdance.com/tablet";};
+        $("#cashOk").onclick=()=>{location.href=SETTINGS.HOME_URL;};
       }
 
       function renderMain(){
@@ -281,7 +281,7 @@
         $("#btnMembership").onclick=()=>openPayPane("membership");
 
         // Overlay close goes back to home (main input page)
-        $("#qrDone").onclick=()=>{ location.href = "https://msbdance.com/tablet"; };
+        $("#qrDone").onclick=()=>{ location.href = SETTINGS.HOME_URL; };
 
         // Fix 'Not me' button logic
         if (back) {
