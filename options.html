@@ -560,22 +560,11 @@
 
 
 
-        // Stripe Elements - using test keys for development
-        const stripe = Stripe('pk_test_51LapNkD6NCrArHXBoKFz9KVTLcNnx6pAcql7bs3YxK3qCXxVhtdBOzCupwMv1J5Io3oPwjqFUGPTJrxnWumumJww00eyBAuzLh');
-        const elements = stripe.elements();
-        const cardElement = elements.create('card', {
-          style: {
-            base: {
-              color: '#f3f4f6',
-              fontFamily: 'Inter, system-ui, Arial',
-              fontSize: '16px',
-              '::placeholder': {
-                color: '#9ca3af',
-              },
-            },
-          },
-        });
-        cardElement.mount('#card-element');
+        // Stripe Elements - (old static init removed; using dynamic init below)
+        // const stripe = Stripe('pk_test_...');
+        // const elements = stripe.elements();
+        // const cardElement = elements.create('card', { /* ... */ });
+        // cardElement.mount('#card-element');
 
         const paymentForm = document.getElementById('payment-form');
         const cardError = document.getElementById('card-error');
@@ -583,8 +572,27 @@
         let currentProductType = '';
         let clientSecret = '';
 
+        // Determine environment dynamically
+        const HOST = location.hostname;
+        const IS_LOCAL = HOST === 'localhost' || HOST === '127.0.0.1';
+        const IS_TEST = HOST === 'test.tablet.msbdance.com';
+        const IS_PROD = HOST === 'tablet.msbdance.com';
+
+        // Dynamic API base (prod -> prod Railway, test or local -> test Railway)
+        const API_BASE = IS_PROD
+          ? 'https://msbd-tablet-system-production.up.railway.app'
+          : 'https://test-msbd-tablet-system-production.up.railway.app';
+
+        // Dynamic publishable key (replace with your real live key when ready)
+        const STRIPE_PUBLISHABLE_KEY = IS_PROD
+          ? (window.STRIPE_LIVE_PUBLISHABLE_KEY || 'pk_live_51LapNkD6NCrArHXBtnfJ2D86hnEKmWgz300JjIl2xklRzYnRlzpDtdXMLUoI24V4RaVkV5IW317IoQqvhUEmqhlR004hLXlB6Q')
+          : 'pk_test_51LapNkD6NCrArHXBoKFz9KVTLcNnx6pAcql7bs3YxK3qCXxVhtdBOzCupwMv1J5Io3oPwjqFUGPTJrxnWumumJww00eyBAuzLh';
+
+        // Re-init Stripe with dynamic key
+        const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+        console.log('[ENV] Host:', HOST, 'API_BASE:', API_BASE, 'Using key:', STRIPE_PUBLISHABLE_KEY.includes('live') ? 'LIVE' : 'TEST');
+
         // API base URL - update this to your server URL
-        const API_BASE = 'https://test-msbd-tablet-system-production.up.railway.app';
         const DEV_MODE = false; // Set to false when server is running
 
         // Get product type and pricing
@@ -807,6 +815,20 @@
           originalShowStripeCardForm();
           loadSavedCards();
         };
+
+        // Stripe Elements initialization
+        const elements = stripe.elements();
+        const cardElement = elements.create('card', {
+          style: {
+            base: {
+              color: '#f3f4f6',
+              fontFamily: 'Inter, system-ui, Arial',
+              fontSize: '16px',
+              '::placeholder': { color: '#9ca3af' }
+            }
+          }
+        });
+        cardElement.mount('#card-element');
       }
 
       renderMain();
