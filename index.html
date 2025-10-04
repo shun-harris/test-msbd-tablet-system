@@ -15,7 +15,14 @@
       min-height:100vh; display:flex; align-items:center; justify-content:center;
       background: radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
     }
-    .stack{ width:min(960px,92%); text-align:center; padding:32px 12px 40px; }
+    .stack{ 
+      width:min(960px,92%); text-align:center; padding:32px 12px 32px; 
+      position:relative; 
+      min-height:80vh;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
 
     .brand{ width:92px;height:92px;margin:0 auto 14px; border-radius:20px; overflow:hidden; }
     .brand img{ width:100%; height:100%; object-fit:contain; display:block; }
@@ -27,8 +34,12 @@
       display:flex; align-items:center; justify-content:center; gap:12px;
       width:100%; height:84px; border-radius:16px; border:0; cursor:pointer;
       font-weight:800; font-size:clamp(18px,3.8vw,26px);
-      transition:transform .06s, background .15s, color .15s, opacity .15s, filter .1s;
+      transition:transform .2s cubic-bezier(0.25, 0.46, 0.45, 0.94), background .3s ease, color .3s ease, opacity .3s ease, filter .2s ease, box-shadow .3s ease;
       position:relative; overflow:hidden; touch-action:manipulation;
+    }
+    .btn:hover:not(.btn-disabled){
+      transform:translateY(-2px);
+      box-shadow:0 8px 25px rgba(0,0,0,.15);
     }
     .btn:active{ transform:scale(.99); }
     .btn-gold{ background:linear-gradient(180deg,var(--gold1),var(--gold2)); color:#1b1400; }
@@ -75,6 +86,56 @@
       letter-spacing: 0.3px;
     }
     
+    /* Success screen animations */
+    .success-title.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) scale(1.05) !important;
+      transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .success-detail.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
+    }
+    
+    .success-countdown.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s;
+    }
+    
+    .success-button.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s;
+    }
+    
+    /* Success screen animations */
+    .success-title.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) scale(1.05) !important;
+      transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .success-detail.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
+    }
+    
+    .success-countdown.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s;
+    }
+    
+    .success-button.celebrate {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s;
+    }
+    
     /* Instant loading animation for visual continuity */
     .instant-loader {
       position: fixed;
@@ -117,6 +178,12 @@
       width:min(760px,100%); margin:0 auto; padding:18px 20px;
       background:#0f1012; color:#fff; border:1px solid rgba(255,255,255,.12);
       border-radius:14px; font-size:clamp(18px,3.8vw,24px); outline:none;
+      transition:all .3s ease, transform .2s ease;
+    }
+    .input:focus{
+      border-color:rgba(243,220,138,.4);
+      box-shadow:0 0 0 3px rgba(243,220,138,.1);
+      transform:translateY(-1px);
     }
 
     @keyframes shake { 0%{transform:translateX(0)}20%{transform:translateX(-6px)}
@@ -143,9 +210,31 @@
     opacity:.88;
   }
 
-    .screen{ display:none; opacity:0; transform:translateY(12px); transition:all .4s ease-out; }
-    .screen.show{ display:block; opacity:1; transform:translateY(0); }
-    .screen.exit{ opacity:0; transform:translateY(-8px); transition:all 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .screen{ 
+      display:none; opacity:0; transform:translateX(30px); 
+      transition:all .5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+      position:absolute; 
+      width:100%; 
+      z-index:1;
+    }
+    .screen.show{ 
+      display:block; opacity:1; transform:translateX(0); 
+      z-index:2;
+    }
+    .screen.slide-out-left{ 
+      opacity:0; transform:translateX(-30px); 
+      transition:all .4s cubic-bezier(0.55, 0.06, 0.68, 0.19); 
+      z-index:1;
+    }
+    .screen.slide-out-right{ 
+      opacity:0; transform:translateX(30px); 
+      transition:all .4s cubic-bezier(0.55, 0.06, 0.68, 0.19); 
+      z-index:1;
+    }
+    .screen.exit{ 
+      opacity:0; transform:translateY(-8px); 
+      transition:all 1.2s cubic-bezier(0.4, 0, 0.2, 1); 
+    }
 
     #adminModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);
                  align-items:center; justify-content:center; }
@@ -186,8 +275,9 @@
     .secondary-buttons{opacity:0;transform:translateY(10px);transition:opacity 260ms ease-out,transform 260ms ease-out;}
     .reveal{opacity:1 !important;transform:translateY(0) !important;}
     .back-button{ height:84px; font-size:clamp(18px,3.8vw,26px); border-radius:16px;
-      transition: transform 280ms ease-in-out, height 280ms ease-in-out, font-size 280ms ease-in-out, border-radius 280ms ease-in-out, margin-top 280ms ease-in-out; }
+      transition: transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94), height 280ms ease-in-out, font-size 280ms ease-in-out, border-radius 280ms ease-in-out, margin-top 280ms ease-in-out, opacity 200ms ease; }
     .back-button.shrink{ height:52px; font-size:clamp(16px,3vw,20px); border-radius:12px; transform:translateY(6px) scale(0.96); opacity:0.95; }
+    .back-button:hover:not(.shrink){ transform:translateY(-2px) scale(1.02); }
     @media (prefers-reduced-motion: reduce){ .error-message,.secondary-buttons,.back-button,.nf{transition:none !important;} }
 
     /* ===== Polished Number Pad ===== */
@@ -213,8 +303,20 @@
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,.06),
         0 6px 14px rgba(0,0,0,.35);
-      transition:transform .06s, background .15s, border-color .15s, box-shadow .15s;
+      transition:transform .2s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                 background .3s ease, border-color .3s ease, box-shadow .3s ease,
+                 opacity .3s ease;
       position:relative; overflow:hidden; touch-action:manipulation;
+      opacity:0; transform:translateY(15px) scale(0.9);
+    }
+    .nkey.animate-in{
+      opacity:1 !important; transform:translateY(0) scale(1) !important;
+    }
+    .nkey:hover{
+      transform:translateY(-2px) scale(1.05);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 8px 20px rgba(0,0,0,.4);
     }
     .nkey:active{ transform:scale(.98); }
     .nkey.muted{ opacity:.9; }
@@ -731,15 +833,141 @@
     /* =============================== [SECTION: STATE + SCREEN SWAP] (rarely changes) =============================== */
     let current = { phone:"", name:"" };
     let selected = new Set();
-    const swap = id => { ["scr-welcome","scr-drop","scr-phone","scr-classes","scr-done"].forEach(k=>$("#"+k).classList.remove("show")); $("#"+id).classList.add("show"); };
+    
+    // Enhanced screen transition with smooth animations
+    const swap = (id, direction = 'forward', instantHide = false) => {
+      const screens = ["scr-welcome","scr-drop","scr-phone","scr-classes","scr-done"];
+      const current = screens.find(s => $("#"+s).classList.contains("show"));
+      
+      if (current) {
+        const currentEl = $("#"+current);
+        
+        if (instantHide) {
+          // Skip transition animation, hide immediately
+          currentEl.classList.remove("show");
+          currentEl.style.display = 'none';
+          // Reset any previous animations on current screen
+          resetScreenAnimations(currentEl);
+        } else {
+          // Normal smooth transition - wait for current to finish before showing new
+          const slideClass = direction === 'back' ? 'slide-out-right' : 'slide-out-left';
+          currentEl.classList.add(slideClass);
+          // Reset any previous animations on current screen
+          resetScreenAnimations(currentEl);
+          
+          setTimeout(() => {
+            currentEl.classList.remove("show", slideClass);
+            currentEl.style.display = 'none';
+          }, 400);
+        }
+      }
+      
+      // For non-instant transitions, wait for current screen to finish sliding out
+      setTimeout(() => {
+        const newScreen = $("#"+id);
+        // Reset any inline styles that might have been set during instant hide
+        newScreen.style.opacity = '';
+        newScreen.style.transform = '';
+        newScreen.style.display = 'block';
+        
+        // Small delay to ensure display is set before adding show class
+        setTimeout(() => {
+          newScreen.classList.add("show");
+          
+          // Trigger specific animations based on screen
+          if (id === 'scr-phone' || id === 'scr-drop') {
+            // Start number pad animation immediately when screen shows
+            setTimeout(() => animateNumberPad(), 100);
+          } else if (id === 'scr-classes') {
+            setTimeout(() => animateClassChips(), 200);
+          } else if (id === 'scr-done') {
+            setTimeout(() => animateSuccessScreen(), 200);
+          } else if (id === 'scr-welcome') {
+            setTimeout(() => animateWelcomeScreen(), 200);
+          }
+        }, 50);
+      }, (current && !instantHide) ? 450 : 100);
+    };
+    
+    // Reset animations on screen elements
+    function resetScreenAnimations(screenEl) {
+      const animatedElements = screenEl.querySelectorAll('.animate-in, .celebrate');
+      animatedElements.forEach(el => {
+        el.classList.remove('animate-in', 'celebrate');
+        // Instantly hide number pad keys to prevent overlap
+        if (el.classList.contains('nkey')) {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(15px) scale(0.9)';
+        }
+      });
+    }
+    
+    // Animate welcome screen elements when returning
+    function animateWelcomeScreen() {
+      const slideElements = document.querySelectorAll('#scr-welcome .slide-in-element');
+      slideElements.forEach((element, i) => {
+        element.classList.remove('animate');
+        setTimeout(() => {
+          element.classList.add('animate');
+        }, i * 50);
+      });
+    }
+    
+    // Animate number pad keys with stagger
+    function animateNumberPad() {
+      const keys = document.querySelectorAll('.nkey');
+      keys.forEach((key, i) => {
+        // Reset to hidden state first
+        key.style.opacity = '0';
+        key.style.transform = 'translateY(15px) scale(0.9)';
+        key.classList.remove('animate-in');
+        
+        // Immediate for first key, then stagger
+        const delay = i === 0 ? 0 : i * 30;
+        setTimeout(() => {
+          key.style.opacity = '';
+          key.style.transform = '';
+          key.classList.add('animate-in');
+        }, delay);
+      });
+    }
+    
+    // Animate class chips with stagger
+    function animateClassChips() {
+      const chips = document.querySelectorAll('.chip');
+      chips.forEach((chip, i) => {
+        setTimeout(() => {
+          chip.classList.add('animate-in');
+        }, i * 100);
+      });
+    }
+    
+    // Animate success screen elements
+    function animateSuccessScreen() {
+      const elements = ['.success-title', '.success-detail', '.success-countdown', '.success-button'];
+      elements.forEach(selector => {
+        const el = document.querySelector(selector);
+        if (el) el.classList.add('celebrate');
+      });
+    }
 
     /* =============================== [SECTION: HOME BUTTONS] (often changes) =============================== */
-    withRippleDelay(document.getElementById('btnDropin'), ()=> swap('scr-drop'));
-    withRippleDelay(document.getElementById('btnMember'), ()=> swap('scr-phone'));
+    withRippleDelay(document.getElementById('btnDropin'), ()=> swap('scr-drop', 'forward'));
+    withRippleDelay(document.getElementById('btnMember'), ()=> swap('scr-phone', 'forward'));
 
     /* =============================== [SECTION: NUMPAD MOUNT] (rarely changes) =============================== */
     mountNumpad("inpDrop");
     mountNumpad("inpPhone");
+    
+    // Ensure all number pad keys start hidden
+    setTimeout(() => {
+      const keys = document.querySelectorAll('.nkey');
+      keys.forEach(key => {
+        key.style.opacity = '0';
+        key.style.transform = 'translateY(15px) scale(0.9)';
+        key.classList.remove('animate-in');
+      });
+    }, 50);
 
      /* =============================== [SECTION: DROP-IN LOGIC] (often changes) =============================== */
     function resetDropInput(){
@@ -753,14 +981,16 @@
       $("#dropErr").classList.remove("reveal");
       $("#dropBtns").classList.remove("reveal");
       $("#backDrop").classList.remove("shrink");
-      swap('scr-welcome');
+      
+      swap('scr-welcome', 'back', true);
     });
 
     // Bind Member Phone back button → Welcome
     withRippleDelay(document.getElementById('back1'), ()=>{
       const box = $("#inpPhone"); if(box){ box.value=''; box.dataset.digits=''; }
       const msg = $("#msgPhone"); if(msg) msg.style.display = 'none';
-      swap('scr-welcome');
+      
+      swap('scr-welcome', 'back', true);
     });
 
     document.addEventListener('input', (e)=>{
@@ -804,6 +1034,17 @@
     });
 
     // "I'm new" / "Try again"
+    // Handle "Try again" button
+    document.getElementById('btnDropRetry').addEventListener('click', ()=>{
+      resetDropInput();
+      $("#dropNotFound").classList.remove("open");
+      $("#dropErr").classList.remove("reveal");
+      $("#dropBtns").classList.remove("reveal");
+      $("#backDrop").classList.remove("shrink");
+      // Focus back on input for smooth UX
+      setTimeout(() => $("#inpDrop").focus(), 100);
+    });
+    
     document.getElementById('btnDropImNew').addEventListener('click', ()=>{
       const d = $("#dropNotFound").dataset.phone || digits10($("#inpDrop").value);
       const popup = document.createElement('div');
@@ -1059,7 +1300,7 @@
           });
         }
 
-        swap("scr-classes");
+        swap("scr-classes", 'forward');
       } catch (err){
         console.error('[MEMBER] UI update error', err);
         $("#msgPhone").textContent = "An internal error occurred. Please tell staff.";
@@ -1070,7 +1311,9 @@
     /* =============================== [SECTION: CLASSES SCREEN NAV BUTTONS] =============================== */
     // Bind classes screen nav buttons after HTML injected
     const back2El = document.getElementById('back2');
-    if (back2El) withRippleDelay(back2El, () => { swap('scr-phone'); });
+    if (back2El) withRippleDelay(back2El, () => { 
+      swap('scr-phone', 'back', true); 
+    });
 
     const notMeEl = document.getElementById('btnNotMeClasses');
     if (notMeEl) {
@@ -1082,7 +1325,8 @@
         if (box) { box.value=''; box.dataset.digits=''; }
         const msg = document.getElementById('msgPhone');
         if (msg) msg.style.display = 'none';
-        swap('scr-phone');
+        
+        swap('scr-phone', 'back', true);
       });
     }
 
@@ -1169,7 +1413,7 @@
 
         const detail = document.getElementById('doneDetail');
         if (detail) detail.textContent = `Checked in for: ${classes.join(', ')}`;
-        swap('scr-done');
+        swap('scr-done', 'forward');
 
         let t = COUNTDOWN_SEC; 
         const cd = document.getElementById('countdown'); 
@@ -1315,8 +1559,22 @@
 
     .class-pills{ display:grid; gap:12px; width:min(860px,100%); margin:0 auto 24px; }
 
-    /* Base frosted look */
-    .chip{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.16); backdrop-filter:blur(8px) saturate(1.1); -webkit-backdrop-filter:blur(8px) saturate(1.1); }
+    /* Base frosted look with animation */
+    .chip{ 
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.16); 
+      backdrop-filter:blur(8px) saturate(1.1); -webkit-backdrop-filter:blur(8px) saturate(1.1);
+      opacity:0; transform:translateY(20px) scale(0.95);
+      transition:all .5s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                 border-color .3s ease, background .3s ease, box-shadow .3s ease;
+    }
+    .chip.animate-in{
+      opacity:1; transform:translateY(0) scale(1);
+    }
+    .chip:hover:not(.checked){
+      transform:translateY(-3px) scale(1.02);
+      background:rgba(255,255,255,.08);
+      box-shadow:0 10px 30px rgba(0,0,0,.2);
+    }
     .chip .row{ display:inline-flex; align-items:center; gap:10px; }
     .chip .label{ display:inline-block; }
     .chip .right{ display:block; font-weight:700; color:var(--muted); font-size:clamp(12px,2.6vw,14px); margin-top:6px; }
