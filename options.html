@@ -819,6 +819,8 @@
         // Stripe Elements initialization
         const elements = stripe.elements();
         const cardElement = elements.create('card', {
+          // Explicitly disable Stripe Link / autofill account button
+          disableLink: true,
           style: {
             base: {
               color: '#f3f4f6',
@@ -828,6 +830,14 @@
             }
           }
         });
+        // Hard fallback: hide any residual Link button via CSS scope
+        (function(){
+          const css = '.StripeElement .LinkPaymentButton, .LinkAction, .link-payment-method-view, button[aria-label*="Link"], .__PrivateStripeElement iframe + div { display:none !important; }';
+          const style = document.createElement('style');
+          style.setAttribute('data-disable-link','true');
+          style.textContent = css;
+          document.head.appendChild(style);
+        })();
         cardElement.mount('#card-element');
       }
 
