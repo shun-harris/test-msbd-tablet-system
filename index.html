@@ -617,8 +617,9 @@
 
       const exists = !!(data && (data.result === "yes" || data.ok === true));
       const { name, firstName, lastName } = extractNameDeep(data);
-      try { if (DEV) console.log("[DROP] resp", data, "→ exists:", exists, "name:", name, firstName, lastName); } catch(_){ }
-      return { exists, name, firstName, lastName };
+      const email = data.email || "";
+      try { if (DEV) console.log("[DROP] resp", data, "→ exists:", exists, "name:", name, firstName, lastName, "email:", email); } catch(_){ }
+      return { exists, name, firstName, lastName, email };
     } catch (err) {
       try { if (DEV) console.error("[DROP] verify error", err); } catch(_){ }
       return { exists:false };
@@ -789,7 +790,7 @@
     <p id="doneDetail" style="color:#d1d5db"></p>
     <p class="sub" style="margin:8px 0 18px;">Going back in <b id="countdown">5</b>…</p>
     <div style="display:grid; gap:14px; width:min(480px,100%); margin:0 auto;">
-      <button id="btnDone" class="btn btn-gold">Done</button>
+      <button id="btnDone" class="btn btn-dgold">Done</button>
     </div>
   </div>
 
@@ -1043,6 +1044,7 @@
         const backUrl = encodeURIComponent(window.location.href.split('#')[0]);
         const qp = new URLSearchParams({ phone: d, found: "1", back: backUrl });
         if (result.name) qp.set("name", result.name);
+        if (result.email) qp.set("email", result.email);
         const url = `${DROPIN_RETURN_URL}?${qp.toString()}`;
         window.location.href = url;
       } else {

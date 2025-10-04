@@ -4,7 +4,7 @@ const cors = require("cors");
 
 // Domain-based environment detection
 const getEnvironmentFromDomain = (req) => {
-    const host = req?.get("host") || process.env.HOST || "localhost";
+    const host = req?.get("host") || process.env.NODE_ENV === "production" ? "tablet.msbdance.com" : "localhost";
     
     if (host.includes("tablet.msbdance.com") && !host.includes("test.")) {
         return "production";
@@ -60,7 +60,33 @@ app.post("/create-payment-intent", async (req, res) => {
         const { phone, name, email } = req.body;
         let customer;
         
-        if (phone) {
+        // Try to find existing customer by email first (most reliable), then phone
+        if (email && !email.includes('@tablet.msbdance.com')) {
+            console.log(`🔍 Searching for customer by email: ${email}`);
+            let existingCustomers = await stripe.customers.search({
+                query: `email:'${email}'`,
+                limit: 1
+            });
+            
+            if (existingCustomers.data.length > 0) {
+                customer = existingCustomers.data[0];
+                console.log(`👤 Found existing customer by email: ${customer.id}`);
+                
+                // Update phone if provided and different
+                if (phone && customer.phone !== phone) {
+                    console.log(`📱 Updating customer phone: ${phone}`);
+                    customer = await stripe.customers.update(customer.id, {
+                        phone: phone,
+                        name: name || customer.name,
+                        metadata: { ...customer.metadata, phone: phone }
+                    });
+                }
+            }
+        }
+        
+        // If not found by email and we have phone, try phone lookup
+        if (!customer && phone) {
+            console.log(`🔍 Searching for customer by phone: ${phone}`);
             // Try multiple ways to find existing customer
             let existingCustomers = await stripe.customers.search({
                 query: `metadata['phone']:'${phone}'`,
@@ -77,7 +103,7 @@ app.post("/create-payment-intent", async (req, res) => {
             
             if (existingCustomers.data.length > 0) {
                 customer = existingCustomers.data[0];
-                console.log(`👤 Found existing customer: ${customer.id} for phone ${phone}`);
+                console.log(`👤 Found existing customer by phone: ${customer.id}`);
                 
                 // Update customer with real email if provided and different
                 if (email && email !== customer.email && !email.includes('@tablet.msbdance.com')) {
@@ -95,22 +121,25 @@ app.post("/create-payment-intent", async (req, res) => {
                         metadata: { ...customer.metadata, phone: phone }
                     });
                 }
-            } else {
-                // Create new customer with real email if available
-                const customerData = {
-                    phone: phone,
-                    name: name || 'Dance Student',
-                    email: email || `${phone}@tablet.msbdance.com`,
-                    metadata: { 
-                        source: 'tablet_system', 
-                        phone: phone,
-                        created_via: email ? 'webhook_with_email' : 'tablet_fallback'
-                    }
-                };
-                
-                customer = await stripe.customers.create(customerData);
-                console.log(`👤 Created new customer: ${customer.id} for phone ${phone}${email ? ` with email ${email}` : ' with fallback email'}`);
             }
+        }
+        
+        // Create new customer if not found
+        if (!customer) {
+            // Create new customer with real email if available
+            const customerData = {
+                phone: phone,
+                name: name || 'Dance Student',
+                email: email || `${phone}@tablet.msbdance.com`,
+                metadata: { 
+                    source: 'tablet_system', 
+                    phone: phone,
+                    created_via: email ? 'webhook_with_email' : 'tablet_fallback'
+                }
+            };
+            
+            customer = await stripe.customers.create(customerData);
+            console.log(`👤 Created new customer: ${customer.id} for phone ${phone}${email ? ` with email ${email}` : ' with fallback email'}`);
         }
 
         const paymentIntentData = {
@@ -159,20 +188,37 @@ app.post("/get-payment-methods", async (req, res) => {
     console.log("💳 Get payment methods request:", req.body);
     try {
         const stripe = getStripeForRequest(req);
-        const { phone } = req.body;
+        const { phone, email } = req.body;
         
-        if (!phone) {
+        if (!phone && !email) {
             return res.json({ payment_methods: [] });
         }
         
-        // Try multiple ways to find customer by phone number
+        // Try to find customer by email first (most reliable), then phone
         let customer = null;
         
-        // Method 1: Search by phone in metadata (tablet system)
-        const metadataCustomers = await stripe.customers.search({
-            query: `metadata['phone']:'${phone}'`,
-            limit: 1
-        });
+        if (email && !email.includes('@tablet.msbdance.com')) {
+            console.log(`🔍 Searching for customer by email: ${email}`);
+            const emailCustomers = await stripe.customers.search({
+                query: `email:'${email}'`,
+                limit: 1
+            });
+            
+            if (emailCustomers.data.length > 0) {
+                customer = emailCustomers.data[0];
+                console.log(`👤 Found customer ${customer.id} via email`);
+            }
+        }
+        
+        // If not found by email and we have phone, try phone lookup
+        if (!customer && phone) {
+            console.log(`🔍 Searching for customer by phone: ${phone}`);
+            
+            // Method 1: Search by phone in metadata (tablet system)
+            const metadataCustomers = await stripe.customers.search({
+                query: `metadata['phone']:'${phone}'`,
+                limit: 1
+            });
         
         if (metadataCustomers.data.length > 0) {
             customer = metadataCustomers.data[0];
@@ -191,10 +237,11 @@ app.post("/get-payment-methods", async (req, res) => {
         }
         
         if (!customer) {
-            console.log(`📱 No customer found for phone ${phone} (searched metadata and phone field)`);
+            const searchBy = email && !email.includes('@tablet.msbdance.com') ? `email ${email}` : `phone ${phone}`;
+            console.log(`📱 No customer found for ${searchBy}`);
             return res.json({ payment_methods: [] });
         }
-        console.log(`👤 Found customer ${customer.id} for phone ${phone}`);
+        console.log(`👤 Found customer ${customer.id}`);
         
         // Get saved payment methods for this customer
         const paymentMethods = await stripe.paymentMethods.list({

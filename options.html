@@ -281,6 +281,7 @@
       const qs=new URLSearchParams(location.search);
       const phone=(qs.get("phone")||"").replace(/\D/g,"").slice(-10);
       const name=(qs.get("name")||"").trim();
+      const email=(qs.get("email")||"").trim();
       const back=qs.get("back")||"";
       const ctx={kind:null};
 
@@ -348,6 +349,7 @@
             <div class="card"><div class="fieldCard">
               <div class="kv"><div class="k">Guest</div><div class="v">${name||"—"}</div></div>
               <div class="kv"><div class="k">Phone</div><div class="v">${phone||"—"}</div></div>
+              ${email ? `<div class="kv"><div class="k">Email</div><div class="v">${email}</div></div>` : ''}
             </div></div>
             <div class="minor-row"><button id="notMeGoBack" class="link-btn">Not me</button></div>
           </div></div>
@@ -614,7 +616,7 @@
               const response = await fetch(`${API_BASE}/get-payment-methods`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
+                body: JSON.stringify({ phone, email })
               });
               
               data = await response.json();
@@ -656,6 +658,7 @@
               body: JSON.stringify({
                 phone,
                 name,
+                email,
                 amount,
                 product_type: productType,
                 payment_method_id: card.id
@@ -748,7 +751,7 @@
             const setupResponse = await fetch(`${API_BASE}/create-setup-intent`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phone, name })
+              body: JSON.stringify({ phone, name, email })
             });
             
             const setupData = await setupResponse.json();
@@ -778,6 +781,7 @@
               body: JSON.stringify({
                 phone,
                 name,
+                email,
                 amount,
                 product_type: productType,
                 payment_method_id: setupIntent.payment_method
