@@ -39,8 +39,40 @@ const getStripeForRequest = (req) => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// CORS configuration (explicit whitelist so we can safely allow localhost + test hitting prod API)
+const ALLOWED_ORIGINS = [
+    'https://tablet.msbdance.com',
+    'https://test.tablet.msbdance.com',
+    'http://localhost',
+    'http://127.0.0.1'
+];
+
+function originAllowed(origin) {
+    if (!origin) return true; // Non-browser or file:// loads
+    // Allow any localhost port
+    if (/^http:\/\/localhost(:\d+)?$/i.test(origin)) return true;
+    if (/^http:\/\/127\.0\.0\.1(:\d+)?$/i.test(origin)) return true;
+    return ALLOWED_ORIGINS.includes(origin);
+}
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (originAllowed(origin)) {
+            if (origin) console.log(`✅ CORS allow: ${origin}`);
+            return callback(null, true);
+        }
+        console.warn(`🚫 CORS block: ${origin}`);
+        return callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET','POST','OPTIONS'],
+    allowedHeaders: ['Content-Type','Authorization'],
+    optionsSuccessStatus: 200
+}));
+
+// Handle preflight early (optional explicit)
+app.options('*', (req,res)=>{
+    res.sendStatus(200);
+});
 app.use(express.json());
 app.use(express.static("."));
 

@@ -583,10 +583,20 @@
         const FORCED_STRIPE_MODE = (RAW_SAVED_MODE === 'live' ? 'live' : 'test');
         const USING_LIVE = IS_PROD || FORCED_STRIPE_MODE === 'live';
 
-        // API base selection (when toggling to live on test/local, also use production backend so accounts match)
-        const API_BASE = USING_LIVE
-          ? 'https://msbd-tablet-system-production.up.railway.app'
-          : 'https://test-msbd-tablet-system-production.up.railway.app';
+        // Backend target toggle (remote vs local) - only relevant on non-prod
+        const RAW_BACKEND_MODE = (!IS_PROD && localStorage.getItem('backendMode')) || 'remote';
+        const BACKEND_MODE = (RAW_BACKEND_MODE === 'local' ? 'local' : 'remote');
+        const LOCAL_BACKEND_URL = 'http://localhost:3000';
+        const REMOTE_TEST_URL = 'https://test-msbd-tablet-system-production.up.railway.app';
+        const REMOTE_PROD_URL = 'https://msbd-tablet-system-production.up.railway.app';
+
+        // API base selection
+        let API_BASE;
+        if (BACKEND_MODE === 'local' && IS_LOCAL) {
+          API_BASE = LOCAL_BACKEND_URL; // force local only if truly on a local host
+        } else {
+          API_BASE = USING_LIVE ? REMOTE_PROD_URL : REMOTE_TEST_URL;
+        }
 
         // Publishable key selection
         const STRIPE_LIVE_KEY = (window.STRIPE_LIVE_PUBLISHABLE_KEY || 'pk_live_51LapNkD6NCrArHXBtnfJ2D86hnEKmWgz300JjIl2xklRzYnRlzpDtdXMLUoI24V4RaVkV5IW317IoQqvhUEmqhlR004hLXlB6Q');
@@ -601,11 +611,12 @@
           bar.innerHTML = `
             <style>
               #stripe-mode-toggle{position:fixed;top:8px;right:8px;z-index:1500;font-family:Inter,system-ui,Arial}
-              #stripe-mode-toggle .sm-pill{display:flex;gap:6px;background:#141519;border:1px solid var(--border);padding:6px 10px;border-radius:999px;align-items:center;box-shadow:0 4px 18px -6px rgba(0,0,0,.6);}
+              #stripe-mode-toggle .sm-pill{display:flex;gap:6px;background:#141519;border:1px solid var(--border);padding:6px 10px;border-radius:999px;align-items:center;box-shadow:0 4px 18px -6px rgba(0,0,0,.6);flex-wrap:wrap;}
               #stripe-mode-toggle button{background:#0f1012;border:1px solid var(--border);color:#cbd1d8;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-weight:600;letter-spacing:.5px;}
               #stripe-mode-toggle button.active{background:linear-gradient(180deg,var(--gold1),var(--gold2));color:#1b1400;border-color:transparent;}
               #stripe-mode-toggle .warn{color:#f59e0b;font-size:10px;font-weight:600;margin-left:4px;}
               #stripe-mode-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--gold1);box-shadow:0 0 0 3px rgba(0,0,0,.4)}
+              #stripe-mode-toggle .group-label{font-size:10px;font-weight:700;opacity:.55;margin:0 2px 0 6px;}
             </style>
             <div class="sm-pill">
               <div class="dot" title="Stripe mode status"></div>
@@ -613,10 +624,13 @@
               <button data-mode="test">TEST</button>
               <button data-mode="live">LIVE</button>
               <span class="warn" id="stripeModeWarn" style="display:none;">LIVE!</span>
+              <span class="group-label">Backend</span>
+              <button data-backend="remote">REMOTE</button>
+              <button data-backend="local">LOCAL</button>
             </div>`;
           document.body.appendChild(bar);
-          const btns = bar.querySelectorAll('button[data-mode]');
-          btns.forEach(b=>{
+          const modeBtns = bar.querySelectorAll('button[data-mode]');
+          modeBtns.forEach(b=>{
             if(b.getAttribute('data-mode')===FORCED_STRIPE_MODE) b.classList.add('active');
             b.addEventListener('click',()=>{
               const mode = b.getAttribute('data-mode');
@@ -625,6 +639,19 @@
                 if(!ok) return;
               }
               localStorage.setItem('stripeMode', mode);
+              location.reload();
+            });
+          });
+          const backendBtns = bar.querySelectorAll('button[data-backend]');
+          backendBtns.forEach(b=>{
+            if(b.getAttribute('data-backend')===BACKEND_MODE) b.classList.add('active');
+            b.addEventListener('click',()=>{
+              const tgt = b.getAttribute('data-backend');
+              if(tgt==='local' && !IS_LOCAL){
+                alert('Local backend only available when running on a localhost host.');
+                return;
+              }
+              localStorage.setItem('backendMode', tgt);
               location.reload();
             });
           });
@@ -875,13 +902,29 @@
         });
         // Hard fallback: hide any residual Link button via CSS scope
         (function(){
-          const css = '.StripeElement .LinkPaymentButton, .LinkAction, .link-payment-method-view, button[aria-label*="Link"], .__PrivateStripeElement iframe + div { display:none !important; }';
+          // Narrow the CSS so we don't accidentally hide an overlay layer needed for input focus
+          const css = [
+            '.StripeElement .LinkPaymentButton',
+            '.StripeElement .LinkAction',
+            '.StripeElement .link-payment-method-view',
+            'button[aria-label*="Link"]'
+          ].map(sel=>sel+'{display:none !important;}').join('');
           const style = document.createElement('style');
-          style.setAttribute('data-disable-link','true');
-          style.textContent = css;
-          document.head.appendChild(style);
+            style.setAttribute('data-disable-link','true');
+            style.textContent = css;
+            document.head.appendChild(style);
         })();
         cardElement.mount('#card-element');
+        cardElement.on('ready', () => {
+          try {
+            console.log('[Stripe] Card element ready. Live mode:', USING_LIVE);
+            // Ensure iframe really can receive input
+            const iframe = document.querySelector('#card-element iframe');
+            if(iframe){
+              iframe.style.pointerEvents = 'auto';
+            }
+          } catch(e) { console.warn('Post-mount adjust error', e); }
+        });
       }
 
       renderMain();
