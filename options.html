@@ -889,8 +889,7 @@
         // Stripe Elements initialization
         const elements = stripe.elements();
         const cardElement = elements.create('card', {
-          // Explicitly disable Stripe Link / autofill account button
-          disableLink: true,
+          // Removed disableLink (undocumented for standalone card) to avoid live-mode structure side effects
           style: {
             base: {
               color: '#f3f4f6',
@@ -900,19 +899,40 @@
             }
           }
         });
-        // Hard fallback: hide any residual Link button via CSS scope
-        (function(){
-          // Narrow the CSS so we don't accidentally hide an overlay layer needed for input focus
-          const css = [
-            '.StripeElement .LinkPaymentButton',
-            '.StripeElement .LinkAction',
-            '.StripeElement .link-payment-method-view',
-            'button[aria-label*="Link"]'
-          ].map(sel=>sel+'{display:none !important;}').join('');
-          const style = document.createElement('style');
-            style.setAttribute('data-disable-link','true');
-            style.textContent = css;
-            document.head.appendChild(style);
+
+        // Safer Link suppression (MutationObserver) that only removes explicit Link UI nodes after they appear
+        (function installLinkSuppression(){
+          if (IS_PROD) return; // In prod we already restrict payment_method_types server-side
+          window.__linkSuppressEnabled = true;
+          function suppress(root){
+            if(!window.__linkSuppressEnabled) return;
+            const candidates = root.querySelectorAll('[aria-label*="Link"], .LinkPaymentButton, .LinkAction, .link-payment-method-view');
+            candidates.forEach(el=>{
+              el.style.display = 'none';
+              el.setAttribute('data-link-suppressed','1');
+            });
+          }
+          const target = document.getElementById('card-element');
+          const obs = new MutationObserver(muts=>{
+            for(const m of muts){
+              if(m.addedNodes){
+                m.addedNodes.forEach(n=>{ if(n.nodeType===1) suppress(n); });
+              }
+            }
+          });
+          if(target){
+            suppress(target);
+            obs.observe(target,{childList:true,subtree:true});
+            console.log('[LinkSuppress] Observer active. Toggle with Alt+Shift+L');
+          }
+          window.addEventListener('keydown',e=>{
+            if(e.altKey && e.shiftKey && e.code==='KeyL'){
+              window.__linkSuppressEnabled = !window.__linkSuppressEnabled;
+              console.log('[LinkSuppress] Enabled =', window.__linkSuppressEnabled);
+              if(window.__linkSuppressEnabled){ suppress(target||document); }
+              else { document.querySelectorAll('[data-link-suppressed]')?.forEach(el=>{ el.style.display=''; }); }
+            }
+          });
         })();
         cardElement.mount('#card-element');
         cardElement.on('ready', () => {
@@ -922,6 +942,8 @@
             const iframe = document.querySelector('#card-element iframe');
             if(iframe){
               iframe.style.pointerEvents = 'auto';
+              const cs = getComputedStyle(iframe);
+              console.log('[Stripe][IframeStyles]', { pointerEvents: cs.pointerEvents, opacity: cs.opacity, zIndex: cs.zIndex });
             }
           } catch(e) { console.warn('Post-mount adjust error', e); }
         });
