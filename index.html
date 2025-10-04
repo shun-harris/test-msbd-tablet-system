@@ -236,15 +236,18 @@
       transition:all 1.2s cubic-bezier(0.4, 0, 0.2, 1); 
     }
 
-    #adminModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);
+    #adminModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:10000;
                  align-items:center; justify-content:center; }
     #adminPanel{ background:linear-gradient(180deg,#17181c,#101113); color:#eee;
-                 width:min(920px,94%); max-height:88vh; overflow:auto;
-                 border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px; }
+                 width:min(350px,85vw); max-height:88vh; overflow:auto;
+                 border:1px solid rgba(255,255,255,.15); border-radius:16px; padding:16px; 
+                 box-shadow:0 10px 30px rgba(0,0,0,.8); text-align:center;
+                 transition:width 0.3s ease, max-width 0.3s ease; }
+    #adminPanel.expanded{ width:min(920px,94%); text-align:left; }
     .pill{ padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
            background:rgba(255,255,255,.06); font-size:12px; }
-    .admin-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0; }
-    .admin-section{ border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:12px; margin-top:12px; }
+    .admin-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0; justify-content:flex-start; }
+    .admin-section{ border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:14px; margin-top:14px; }
 
     .day-card{ border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; margin-top:10px; }
     .day-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -352,7 +355,7 @@
   
   // Version Info
   const VERSION = "v2.3.0";
-  const BUILD_DATE = "Jan 4, 2025";
+  const BUILD_DATE = "Oct 4, 2025 - 3:15 PM";
   const BUILD_INFO = "Railway server + Stripe integration + customer lookup + card saving";
   
   const DEV =
@@ -798,24 +801,26 @@
 
         <div id="adminModal">
           <div id="adminPanel">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div id="adminHeader" style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
               <h3 style="margin:0;font-size:20px;font-weight:800;color:#f3f4f6;">Admin</h3>
-              <span id="syncBadge" class="sync-badge">…</span>
+              <span id="syncBadge" class="sync-badge" style="display:none">…</span>
             </div>
-            <p style="margin:6px 0 8px;opacity:.8;font-size:14px;color:#c9cacc">Enter PIN. Save goes to the cloud.</p>
+            <p style="margin:0 0 12px;opacity:.8;font-size:14px;color:#c9cacc">Enter PIN. Save goes to the cloud.</p>
 
-            <div class="admin-row">
-              <input id="adminPin" type="password" placeholder="PIN" style="padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#0f1012;color:#fff">
-              <button id="adminUnlock" class="icon-btn add-btn">Unlock</button>
-              <span id="pinMsg" style="color:#ff9aa1;display:none">Wrong PIN</span>
-              <button id="adminClose" class="icon-btn del-btn" style="margin-left:auto;">Close</button>
+            <div class="admin-row" style="justify-content:center;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:10px;align-items:center">
+                <input id="adminPin" type="password" placeholder="PIN" style="padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#0f1012;color:#fff;width:120px">
+                <button id="adminUnlock" class="icon-btn add-btn">Unlock</button>
+              </div>
+              <span id="pinMsg" style="color:#ff9aa1;display:none;font-size:12px">Wrong PIN</span>
+              <button id="adminClose" class="icon-btn del-btn">Close</button>
             </div>
 
             <div id="adminBody" style="display:none">
               <!-- Version Info Section -->
               <div class="admin-section">
-                <h4 style="margin:4px 0 6px;color:#eee">System Info</h4>
-                <div style="font-size:12px;color:#c9cacc;line-height:1.4;">
+                <h4 style="margin:4px 0 6px;color:#eee;text-align:center">System Info</h4>
+                <div style="font-size:12px;color:#c9cacc;line-height:1.4;text-align:center;">
                   <div><strong>Version:</strong> <span id="versionDisplay">v1.0.0</span></div>
                   <div><strong>Environment:</strong> <span id="environmentDisplay">Loading...</span></div>
                   <div><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">Jan 2025</span></div>
@@ -1143,12 +1148,28 @@
     const scheduleGrid=$("#scheduleGrid"), saveSchedule=$("#saveSchedule");
     // Removed members admin UI; guard against any legacy references
 
-    adminFab.onclick=()=>{ adminModal.style.display="flex"; document.body.style.overflow="hidden"; pinMsg.style.display="none"; adminBody.style.display="none"; adminPin.value=""; adminPin.focus(); };
+    adminFab.onclick=()=>{ 
+      adminModal.style.display="flex"; 
+      document.body.style.overflow="hidden"; 
+      pinMsg.style.display="none"; 
+      adminBody.style.display="none"; 
+      adminPin.value=""; 
+      adminPin.focus(); 
+      // Reset to compact size
+      $("#adminPanel").classList.remove("expanded");
+      $("#adminHeader").style.justifyContent="center";
+      $("#syncBadge").style.display="none";
+    };
     adminClose.onclick=()=>{ adminModal.style.display="none"; document.body.style.overflow=""; };
 
     adminUnlock.onclick=()=>{
       if(adminPin.value===ADMIN_PIN){
-        pinMsg.style.display="none"; adminBody.style.display="block";
+        pinMsg.style.display="none"; 
+        adminBody.style.display="block";
+        // Expand panel and show full header
+        $("#adminPanel").classList.add("expanded");
+        $("#adminHeader").style.justifyContent="space-between";
+        $("#syncBadge").style.display="inline";
         // Update version info
         updateVersionDisplay();
         // Only render schedule editor now
