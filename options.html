@@ -574,19 +574,62 @@
 
         // Determine environment dynamically
         const HOST = location.hostname;
-        const IS_LOCAL = HOST === 'localhost' || HOST === '127.0.0.1';
+        const IS_LOCAL = HOST === 'localhost' || HOST === '127.0.0.1' || HOST === '0.0.0.0' || HOST === '::1';
         const IS_TEST = HOST === 'test.tablet.msbdance.com';
         const IS_PROD = HOST === 'tablet.msbdance.com';
 
-        // Dynamic API base (prod -> prod Railway, test or local -> test Railway)
-        const API_BASE = IS_PROD
+        // Allow manual override of Stripe mode (only on test/local) to point at live stack for exploratory testing
+        const RAW_SAVED_MODE = (!IS_PROD && localStorage.getItem('stripeMode')) || 'test';
+        const FORCED_STRIPE_MODE = (RAW_SAVED_MODE === 'live' ? 'live' : 'test');
+        const USING_LIVE = IS_PROD || FORCED_STRIPE_MODE === 'live';
+
+        // API base selection (when toggling to live on test/local, also use production backend so accounts match)
+        const API_BASE = USING_LIVE
           ? 'https://msbd-tablet-system-production.up.railway.app'
           : 'https://test-msbd-tablet-system-production.up.railway.app';
 
-        // Dynamic publishable key (replace with your real live key when ready)
-        const STRIPE_PUBLISHABLE_KEY = IS_PROD
-          ? (window.STRIPE_LIVE_PUBLISHABLE_KEY || 'pk_live_51LapNkD6NCrArHXBtnfJ2D86hnEKmWgz300JjIl2xklRzYnRlzpDtdXMLUoI24V4RaVkV5IW317IoQqvhUEmqhlR004hLXlB6Q')
-          : 'pk_test_51LapNkD6NCrArHXBoKFz9KVTLcNnx6pAcql7bs3YxK3qCXxVhtdBOzCupwMv1J5Io3oPwjqFUGPTJrxnWumumJww00eyBAuzLh';
+        // Publishable key selection
+        const STRIPE_LIVE_KEY = (window.STRIPE_LIVE_PUBLISHABLE_KEY || 'pk_live_51LapNkD6NCrArHXBtnfJ2D86hnEKmWgz300JjIl2xklRzYnRlzpDtdXMLUoI24V4RaVkV5IW317IoQqvhUEmqhlR004hLXlB6Q');
+        const STRIPE_TEST_KEY = 'pk_test_51LapNkD6NCrArHXBoKFz9KVTLcNnx6pAcql7bs3YxK3qCXxVhtdBOzCupwMv1J5Io3oPwjqFUGPTJrxnWumumJww00eyBAuzLh';
+        const STRIPE_PUBLISHABLE_KEY = USING_LIVE ? STRIPE_LIVE_KEY : STRIPE_TEST_KEY;
+
+        // Inject toggle UI (non-prod only)
+        (function injectStripeToggle(){
+          if(IS_PROD) return; // never show on production
+          const bar = document.createElement('div');
+          bar.id = 'stripe-mode-toggle';
+          bar.innerHTML = `
+            <style>
+              #stripe-mode-toggle{position:fixed;top:8px;right:8px;z-index:1500;font-family:Inter,system-ui,Arial}
+              #stripe-mode-toggle .sm-pill{display:flex;gap:6px;background:#141519;border:1px solid var(--border);padding:6px 10px;border-radius:999px;align-items:center;box-shadow:0 4px 18px -6px rgba(0,0,0,.6);}
+              #stripe-mode-toggle button{background:#0f1012;border:1px solid var(--border);color:#cbd1d8;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-weight:600;letter-spacing:.5px;}
+              #stripe-mode-toggle button.active{background:linear-gradient(180deg,var(--gold1),var(--gold2));color:#1b1400;border-color:transparent;}
+              #stripe-mode-toggle .warn{color:#f59e0b;font-size:10px;font-weight:600;margin-left:4px;}
+              #stripe-mode-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--gold1);box-shadow:0 0 0 3px rgba(0,0,0,.4)}
+            </style>
+            <div class="sm-pill">
+              <div class="dot" title="Stripe mode status"></div>
+              <span style="font-size:11px;font-weight:700;opacity:.7;">Stripe</span>
+              <button data-mode="test">TEST</button>
+              <button data-mode="live">LIVE</button>
+              <span class="warn" id="stripeModeWarn" style="display:none;">LIVE!</span>
+            </div>`;
+          document.body.appendChild(bar);
+          const btns = bar.querySelectorAll('button[data-mode]');
+          btns.forEach(b=>{
+            if(b.getAttribute('data-mode')===FORCED_STRIPE_MODE) b.classList.add('active');
+            b.addEventListener('click',()=>{
+              const mode = b.getAttribute('data-mode');
+              if(mode==='live' && FORCED_STRIPE_MODE!=='live'){
+                const ok = confirm('Switch to LIVE Stripe? REAL charges will be created. Continue?');
+                if(!ok) return;
+              }
+              localStorage.setItem('stripeMode', mode);
+              location.reload();
+            });
+          });
+          if(FORCED_STRIPE_MODE==='live') bar.querySelector('#stripeModeWarn').style.display='inline';
+        })();
 
         // Re-init Stripe with dynamic key
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
