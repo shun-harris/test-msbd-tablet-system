@@ -143,8 +143,9 @@
     opacity:.88;
   }
 
-    .screen{ display:none; opacity:0; transform:translateY(12px); transition:.25s; }
+    .screen{ display:none; opacity:0; transform:translateY(12px); transition:all .4s ease-out; }
     .screen.show{ display:block; opacity:1; transform:translateY(0); }
+    .screen.exit{ opacity:0; transform:translateY(-8px); transition:all 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
 
     #adminModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);
                  align-items:center; justify-content:center; }
@@ -257,7 +258,7 @@
 
   const CONFETTI = !DEV;
   const RIPPLE   = !DEV;
-  const COUNTDOWN_SEC = DEV ? 2 : 5;
+  const COUNTDOWN_SEC = 8;
 
   const LOGO_URL = "https://storage.googleapis.com/msgsndr/3RfSeF58PmlwTx5aIQ0a/media/68cb7c7d10510f54a333c881.svg";
 
@@ -1178,14 +1179,32 @@
           t -= 1; 
           if (cd) cd.textContent = String(Math.max(0, t));
           if (t <= 0) { 
-            clearInterval(timer); 
-            window.location.href = HOME_URL; 
+            clearInterval(timer);
+            // Add smooth exit animation before redirect
+            const doneScreen = document.getElementById('scr-done');
+            if (doneScreen) {
+              doneScreen.classList.add('exit');
+              setTimeout(() => {
+                window.location.href = HOME_URL;
+              }, 1000); // Wait for exit animation to complete
+            } else {
+              window.location.href = HOME_URL;
+            }
           }
         }, 1000);
 
         withRippleDelay(document.getElementById('btnDone'), () => { 
-          try { clearInterval(timer); } catch(_) { } 
-          window.location.href = HOME_URL; 
+          try { clearInterval(timer); } catch(_) { }
+          // Add smooth exit animation before redirect
+          const doneScreen = document.getElementById('scr-done');
+          if (doneScreen) {
+            doneScreen.classList.add('exit');
+            setTimeout(() => {
+              window.location.href = HOME_URL;
+            }, 1000); // Wait for exit animation to complete
+          } else {
+            window.location.href = HOME_URL;
+          }
         });
       } catch (err) {
         console.error('[CHECKIN] failed', err);
