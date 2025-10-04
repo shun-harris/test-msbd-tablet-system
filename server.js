@@ -4,7 +4,7 @@ const cors = require("cors");
 
 // Domain-based environment detection
 const getEnvironmentFromDomain = (req) => {
-    const host = req?.get("host") || process.env.NODE_ENV === "production" ? "tablet.msbdance.com" : "localhost";
+    const host = req?.get("host") || (process.env.NODE_ENV === "production" ? "tablet.msbdance.com" : "localhost");
     
     if (host.includes("tablet.msbdance.com") && !host.includes("test.")) {
         return "production";
@@ -17,13 +17,21 @@ const getEnvironmentFromDomain = (req) => {
 
 // Helper function to get Stripe instance for current request
 const getStripeForRequest = (req) => {
+    const host = req.get("host") || "localhost";
     const environment = getEnvironmentFromDomain(req);
     const stripeKey = environment === "production" 
         ? process.env.STRIPE_LIVE_KEY 
         : process.env.STRIPE_TEST_KEY;
     
-    console.log(` Request from: ${req.get("host")}  Environment: ${environment}`);
-    console.log(` Using ${environment === "production" ? "LIVE" : "TEST"} Stripe key`);
+    console.log(`🌍 Request from: ${host} → Environment: ${environment}`);
+    console.log(`🔑 Using ${environment === "production" ? "LIVE" : "TEST"} Stripe key`);
+    
+    if (environment === "production" && !process.env.STRIPE_LIVE_KEY) {
+        console.error("❌ STRIPE_LIVE_KEY not found in production environment!");
+    }
+    if (environment !== "production" && !process.env.STRIPE_TEST_KEY) {
+        console.error("❌ STRIPE_TEST_KEY not found for test/local environment!");
+    }
     
     return require("stripe")(stripeKey);
 };
@@ -45,6 +53,21 @@ app.use((req, res, next) => {
 // Routes
 app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
 app.get("/options", (req, res) => res.sendFile(__dirname + "/options.html"));
+
+// Environment test endpoint
+app.get("/test/environment", (req, res) => {
+    const host = req.get("host") || "unknown";
+    const environment = getEnvironmentFromDomain(req);
+    const usingLiveKeys = environment === "production";
+    
+    res.json({
+        host: host,
+        environment: environment,
+        stripe_keys: usingLiveKeys ? "LIVE" : "TEST",
+        timestamp: new Date().toISOString(),
+        version: "v2.3.0"
+    });
+});
 
 // Stripe payment endpoint
 app.post("/create-payment-intent", async (req, res) => {
@@ -234,6 +257,7 @@ app.post("/get-payment-methods", async (req, res) => {
                 customer = phoneCustomers.data[0];
                 console.log(`👤 Found customer ${customer.id} via phone field for phone ${phone}`);
             }
+        }
         }
         
         if (!customer) {
