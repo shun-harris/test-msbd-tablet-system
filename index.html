@@ -351,12 +351,14 @@
 
   <script>
   /* =============================== [SECTION: SETTINGS] (you change these) =============================== */
-  /* Build v2.4.0 – 2025-10-04 – Email-first Stripe lookup, dynamic API base, live key integration */
-  
-  // Version Info
-  const VERSION = "v2.4.0";
-  const BUILD_DATE = "Oct 4, 2025 - 5:30 PM";
-  const BUILD_INFO = "Email-first Stripe lookup + dynamic API base + live publishable key + saved card surfacing";
+  /* Version will be loaded dynamically from version.json (fallbacks below) */
+  let VERSION = "v2.4.0"; // fallback until fetch resolves
+  let BUILD_DATE = "2025-10-04"; // ISO fallback
+  let BUILD_INFO = "Email-first Stripe lookup + dynamic API base + live publishable key + saved card surfacing";
+  fetch('version.json',{cache:'no-store'})
+    .then(r=>r.ok?r.json():null)
+    .then(meta=>{ if(!meta) return; VERSION='v'+meta.version; BUILD_DATE=(meta.buildDate||'').replace('T',' ').replace('Z',''); BUILD_INFO=meta.notes||BUILD_INFO; const vEl=document.getElementById('adminVersion'); if(vEl) vEl.textContent=VERSION; })
+    .catch(()=>{});
   
   const DEV =
     location.hostname === 'localhost' ||

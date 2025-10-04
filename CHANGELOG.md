@@ -1,12 +1,16 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
+
+## [2.4.1] - 2025-10-04
+### Added
+- Test deployment
 
 ## [2.4.0] - 2025-10-04
 ### Added
 - Email-first Stripe customer lookup with phone fallback.
 - Display of saved payment methods for returning drop-ins (options page).
-- Dynamic API base selection (prod vs test vs local → test) removing the need to run a local Node server.
+- Dynamic API base selection (prod vs test vs local â†’ test) removing the need to run a local Node server.
 - Live Stripe publishable key integration for production domain.
 - Build/version metadata surfaced in both admin panels.
 - `/test/environment` endpoint for quick environment & key classification verification.
@@ -52,7 +56,7 @@ All notable changes to this project are documented here. This file supersedes th
 - Added comprehensive customer lookup with fallback search methods.
 - Created payment method management system with automatic card attachment.
 - Added health check endpoint for monitoring & environment verification.
-- Implemented CORS support for GitHub Pages ↔ Railway.
+- Implemented CORS support for GitHub Pages â†” Railway.
 - Added error handling & logging for payment processing and customer management.
 - Version constants system across both frontend pages.
 
@@ -68,7 +72,7 @@ All notable changes to this project are documented here. This file supersedes th
 - CTA bar styling with consistent spacing & layout.
 
 ### Changed
-- Redesigned class count animation (single smooth curve, 6s → 3s).
+- Redesigned class count animation (single smooth curve, 6s â†’ 3s).
 - Replaced `twoStageDramaticSlowdown()` with `smoothDramaticSlowdown()`.
 - Repositioned selection counter above Check In button.
 - Unified button widths with class pill width.

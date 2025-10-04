@@ -837,13 +837,15 @@
 
   <!-- Version Info Constants -->
   <script>
-    // Version Info - Keep in sync with index.html
-  const VERSION = "v2.4.0";
-  const BUILD_DATE = "Oct 4, 2025 - 5:30 PM";
-  const BUILD_INFO = "Email-first Stripe lookup + dynamic API base + live publishable key + saved card surfacing";
+    // Dynamic version info (fallback values)
+    let VERSION = "v2.4.0";
+    let BUILD_DATE = "2025-10-04";
+    let BUILD_INFO = "Email-first Stripe lookup + dynamic API base + live publishable key + saved card surfacing";
     const ADMIN_PIN = "2468";
-    
-    // DEV and TEST constants already defined above in main script
+    fetch('version.json',{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(v=>{ if(!v) return; VERSION='v'+v.version; BUILD_DATE=(v.buildDate||'').slice(0,10); BUILD_INFO=v.notes||BUILD_INFO; const vd=document.getElementById('versionDisplay'); if(vd) vd.textContent=VERSION; })
+      .catch(()=>{});
   </script>
 
   <!-- Admin Panel HTML -->
