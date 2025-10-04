@@ -2,39 +2,52 @@
 const express = require("express");
 const cors = require("cors");
 
-// Domain-based environment detection
-const getEnvironmentFromDomain = (req) => {
-    const host = req?.get("host") || (process.env.NODE_ENV === "production" ? "tablet.msbdance.com" : "localhost");
-    
-    if (host.includes("tablet.msbdance.com") && !host.includes("test.")) {
-        return "production";
-    } else if (host.includes("test.tablet.msbdance.com")) {
-        return "test";
-    } else {
-        return "local";
-    }
-};
+// ================= Environment Detection & Logging =================
+function detectEnvironment(req){
+    const forwarded = (req.headers['x-forwarded-host'] || '').toLowerCase();
+    const host = (forwarded || req.get('host') || '').toLowerCase();
+    const rawHost = host || 'unknown-host';
 
-// Helper function to get Stripe instance for current request
-const getStripeForRequest = (req) => {
-    const host = req.get("host") || "localhost";
-    const environment = getEnvironmentFromDomain(req);
-    const stripeKey = environment === "production" 
-        ? process.env.STRIPE_LIVE_KEY 
-        : process.env.STRIPE_TEST_KEY;
-    
-    console.log(`🌍 Request from: ${host} → Environment: ${environment}`);
-    console.log(`🔑 Using ${environment === "production" ? "LIVE" : "TEST"} Stripe key`);
-    
-    if (environment === "production" && !process.env.STRIPE_LIVE_KEY) {
-        console.error("❌ STRIPE_LIVE_KEY not found in production environment!");
+    // 1. Explicit override via env variable (highest priority)
+    const OVERRIDE = (process.env.APP_ENV || '').toLowerCase();
+    if (OVERRIDE === 'production' || OVERRIDE === 'prod') return { env:'production', reason:'APP_ENV override', host:rawHost, forwarded }; 
+    if (OVERRIDE === 'test' || OVERRIDE === 'staging') return { env:'test', reason:'APP_ENV override', host:rawHost, forwarded }; 
+
+    // 2. Custom domains
+    if (rawHost === 'tablet.msbdance.com') return { env:'production', reason:'custom domain match', host:rawHost, forwarded };
+    if (rawHost === 'test.tablet.msbdance.com') return { env:'test', reason:'test subdomain match', host:rawHost, forwarded };
+
+    // 3. Railway provided domain patterns
+    // Current naming: test-msbd-tablet-system-production.up.railway.app (test) / msbd-tablet-system-production.up.railway.app (future prod)
+    if (/test-msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'test', reason:'railway test pattern', host:rawHost, forwarded };
+    if (/msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'production', reason:'railway production pattern', host:rawHost, forwarded };
+
+    // 4. Local / fallback
+    if (/^(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(rawHost)) return { env:'local', reason:'localhost host', host:rawHost, forwarded };
+    return { env:'local', reason:'default fallback', host:rawHost, forwarded };
+}
+
+function getStripeForRequest(req){
+    const det = detectEnvironment(req);
+    const environment = det.env;
+    const stripeKey = environment === 'production' ? process.env.STRIPE_LIVE_KEY : process.env.STRIPE_TEST_KEY;
+
+    console.log(`\n🌐  Environment Detection`);
+    console.log(`   ├─ host: ${det.host}`);
+    console.log(`   ├─ x-forwarded-host: ${det.forwarded || '∅'}`);
+    console.log(`   ├─ chosen env: ${environment}`);
+    console.log(`   ├─ reason: ${det.reason}`);
+    console.log(`   └─ stripe key family: ${environment === 'production' ? 'LIVE' : 'TEST'}`);
+
+    if (environment === 'production' && !process.env.STRIPE_LIVE_KEY) {
+        console.error('❌ Missing STRIPE_LIVE_KEY for production');
     }
-    if (environment !== "production" && !process.env.STRIPE_TEST_KEY) {
-        console.error("❌ STRIPE_TEST_KEY not found for test/local environment!");
+    if (environment !== 'production' && !process.env.STRIPE_TEST_KEY) {
+        console.error('❌ Missing STRIPE_TEST_KEY for test/local');
     }
-    
-    return require("stripe")(stripeKey);
-};
+
+    return { stripe: require('stripe')(stripeKey), environment, detection: det };
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -88,16 +101,16 @@ app.get("/options", (req, res) => res.sendFile(__dirname + "/options.html"));
 
 // Environment test endpoint
 app.get("/test/environment", (req, res) => {
-    const host = req.get("host") || "unknown";
-    const environment = getEnvironmentFromDomain(req);
-    const usingLiveKeys = environment === "production";
-    
+    const det = detectEnvironment(req);
+    const usingLiveKeys = det.env === 'production';
     res.json({
-        host: host,
-        environment: environment,
-        stripe_keys: usingLiveKeys ? "LIVE" : "TEST",
+        host: det.host,
+        forwardedHost: det.forwarded || null,
+        environment: det.env,
+        determination: det.reason,
+        stripe_keys: usingLiveKeys ? 'LIVE' : 'TEST',
         timestamp: new Date().toISOString(),
-        version: "v2.3.0"
+        version: "v2.4.0"
     });
 });
 
@@ -105,8 +118,7 @@ app.get("/test/environment", (req, res) => {
 app.post("/create-payment-intent", async (req, res) => {
     console.log("💰 Payment intent request received:", req.body);
     try {
-        const stripe = getStripeForRequest(req);
-        const environment = getEnvironmentFromDomain(req);
+    const { stripe, environment, detection } = getStripeForRequest(req);
         const { amount, currency = "usd", description = "Dance class payment", payment_method_id } = req.body;
         
         console.log(`💳 Creating payment intent: $${amount} ${currency}`);
@@ -244,7 +256,7 @@ app.post("/create-payment-intent", async (req, res) => {
 app.post("/get-payment-methods", async (req, res) => {
     console.log("💳 Get payment methods request:", req.body);
     try {
-        const stripe = getStripeForRequest(req);
+    const { stripe, environment, detection } = getStripeForRequest(req);
         const { phone, email } = req.body;
         
         if (!phone && !email) {
@@ -255,7 +267,7 @@ app.post("/get-payment-methods", async (req, res) => {
         let customer = null;
         
         if (email && !email.includes('@tablet.msbdance.com')) {
-            console.log(`🔍 Searching for customer by email: ${email}`);
+            console.log(`🔍 [search] email primary lookup: ${email}`);
             const emailCustomers = await stripe.customers.search({
                 query: `email:'${email}'`,
                 limit: 1
@@ -269,9 +281,10 @@ app.post("/get-payment-methods", async (req, res) => {
         
         // If not found by email and we have phone, try phone lookup
         if (!customer && phone) {
-            console.log(`🔍 Searching for customer by phone: ${phone}`);
+            console.log(`🔍 [search] phone path for: ${phone}`);
             
             // Method 1: Search by phone in metadata (tablet system)
+            console.log(`   → attempt metadata['phone'] search`);
             const metadataCustomers = await stripe.customers.search({
                 query: `metadata['phone']:'${phone}'`,
                 limit: 1
@@ -279,9 +292,9 @@ app.post("/get-payment-methods", async (req, res) => {
         
         if (metadataCustomers.data.length > 0) {
             customer = metadataCustomers.data[0];
-            console.log(`� Found customer ${customer.id} via metadata for phone ${phone}`);
+            console.log(`✅ [search] metadata match: ${customer.id}`);
         } else {
-            // Method 2: Search by phone field directly (other systems)
+            console.log(`   → attempt phone field search`);
             const phoneCustomers = await stripe.customers.search({
                 query: `phone:'${phone}'`,
                 limit: 1
@@ -289,7 +302,7 @@ app.post("/get-payment-methods", async (req, res) => {
             
             if (phoneCustomers.data.length > 0) {
                 customer = phoneCustomers.data[0];
-                console.log(`👤 Found customer ${customer.id} via phone field for phone ${phone}`);
+                console.log(`✅ [search] phone field match: ${customer.id}`);
             }
         }
         }
@@ -329,8 +342,7 @@ app.post("/get-payment-methods", async (req, res) => {
 app.post("/create-setup-intent", async (req, res) => {
     console.log("💾 Setup intent request received:", req.body);
     try {
-        const stripe = getStripeForRequest(req);
-        const environment = getEnvironmentFromDomain(req);
+        const { stripe, environment, detection } = getStripeForRequest(req);
         const { phone, name, email } = req.body;
         
         // Create or get customer
@@ -364,19 +376,19 @@ app.post("/create-setup-intent", async (req, res) => {
 
 // Health check
 app.get("/health", (req, res) => {
-    const environment = getEnvironmentFromDomain(req);
-    res.json({ 
-        status: "ok", 
-        host: req.get("host"),
-        environment: environment,
-        stripe: environment === "production" ? "LIVE MODE" : "TEST MODE"
+    const det = detectEnvironment(req);
+    res.json({
+        status: 'ok',
+        host: det.host,
+        forwardedHost: det.forwarded || null,
+        environment: det.env,
+        reason: det.reason,
+        stripe: det.env === 'production' ? 'LIVE MODE' : 'TEST MODE'
     });
 });
 
 app.listen(PORT, () => {
-    console.log(` Server running on http://localhost:${PORT}`);
-    console.log(` Domain-based environment detection enabled`);
-    console.log(` localhost/IP  TEST key`);
-    console.log(` test.tablet.msbdance.com  TEST key`);
-    console.log(` tablet.msbdance.com  LIVE key`);
+    console.log(`🚀 Server listening on port ${PORT}`);
+    console.log(`🔎 Environment detection order: APP_ENV override > custom domains > Railway patterns > localhost > fallback`);
+    console.log(`💡 Set APP_ENV=production or APP_ENV=test in Railway variables to force mode.`);
 });
