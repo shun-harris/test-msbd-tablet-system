@@ -808,5 +808,109 @@
       renderMain();
     })();
   </script>
+
+  <!-- Version Info Constants -->
+  <script>
+    // Version Info - Keep in sync with index.html
+    const VERSION = "v2.3.0";
+    const BUILD_DATE = "Jan 4, 2025";
+    const BUILD_INFO = "Railway server + Stripe integration + customer lookup + card saving";
+    const ADMIN_PIN = "2468";
+    
+    // DEV and TEST constants already defined above in main script
+  </script>
+
+  <!-- Admin Panel HTML -->
+  <button id="adminFab" title="Admin" style="position:fixed;right:16px;bottom:16px;width:56px;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:#0f0f10;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.6)">⚙️</button>
+
+  <div id="adminModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center">
+    <div id="adminPanel" style="background:linear-gradient(180deg,#17181c,#101113);color:#eee;border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:20px;width:min(400px,90vw);max-height:80vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0;font-size:20px;font-weight:800;color:#f3f4f6;">Payment System Admin</h3>
+      </div>
+      <p style="margin:6px 0 8px;opacity:.8;font-size:14px;color:#c9cacc">Enter PIN to view system info.</p>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0">
+        <input id="adminPin" type="password" placeholder="PIN" style="padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#0f1012;color:#fff;flex:1;min-width:100px">
+        <button id="adminUnlock" style="padding:10px 16px;border:1px solid #4ade80;border-radius:8px;background:#166534;color:#bbf7d0;cursor:pointer">Unlock</button>
+        <span id="pinMsg" style="color:#ff9aa1;display:none;font-size:12px">Wrong PIN</span>
+        <button id="adminClose" style="padding:10px 16px;border:1px solid #ef4444;border-radius:8px;background:#991b1b;color:#fecaca;cursor:pointer;margin-left:auto">Close</button>
+      </div>
+
+      <div id="adminBody" style="display:none">
+        <!-- Version Info Section -->
+        <div style="border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;margin-top:12px">
+          <h4 style="margin:4px 0 6px;color:#eee">System Info</h4>
+          <div style="font-size:12px;color:#c9cacc;line-height:1.4">
+            <div><strong>Version:</strong> <span id="versionDisplay">v2.3.0</span></div>
+            <div><strong>Environment:</strong> <span id="environmentDisplay">Loading...</span></div>
+            <div><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">Jan 2025</span></div>
+            <div><strong>Page:</strong> Payment Options</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Panel JavaScript -->
+  <script>
+    (function() {
+      const adminFab = document.getElementById('adminFab');
+      const adminModal = document.getElementById('adminModal');
+      const adminClose = document.getElementById('adminClose');
+      const adminPin = document.getElementById('adminPin');
+      const adminUnlock = document.getElementById('adminUnlock');
+      const pinMsg = document.getElementById('pinMsg');
+      const adminBody = document.getElementById('adminBody');
+
+      function $ (id) { return document.getElementById(id); }
+
+      adminFab.onclick = () => {
+        adminModal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+        pinMsg.style.display = "none";
+        adminBody.style.display = "none";
+        adminPin.value = "";
+        adminPin.focus();
+      };
+
+      adminClose.onclick = () => {
+        adminModal.style.display = "none";
+        document.body.style.overflow = "";
+      };
+
+      adminUnlock.onclick = () => {
+        if (adminPin.value === ADMIN_PIN) {
+          pinMsg.style.display = "none";
+          adminBody.style.display = "block";
+          updateVersionDisplay();
+        } else {
+          pinMsg.style.display = "inline";
+          adminBody.style.display = "none";
+        }
+      };
+
+      function updateVersionDisplay() {
+        $("versionDisplay").textContent = VERSION;
+        $("lastUpdatedDisplay").textContent = BUILD_DATE;
+        
+        // Detect environment
+        let env = "Unknown";
+        if (DEV) env = "Development (localhost)";
+        else if (TEST) env = "Test (test.tablet.msbdance.com)";
+        else env = "Production (tablet.msbdance.com)";
+        
+        $("environmentDisplay").textContent = env;
+      }
+
+      // Allow Enter key to unlock
+      adminPin.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          adminUnlock.click();
+        }
+      });
+    })();
+  </script>
+
 </body>
 </html>

@@ -348,7 +348,13 @@
 
   <script>
   /* =============================== [SECTION: SETTINGS] (you change these) =============================== */
-  /* Build v1 – 2025-09-29 – Sectioned layout */
+  /* Build v2.3.0 – 2025-01-04 – Railway deployment with full Stripe payment system */
+  
+  // Version Info
+  const VERSION = "v2.3.0";
+  const BUILD_DATE = "Jan 4, 2025";
+  const BUILD_INFO = "Railway server + Stripe integration + customer lookup + card saving";
+  
   const DEV =
     location.hostname === 'localhost' ||
     location.hostname === '127.0.0.1' ||
@@ -806,6 +812,16 @@
             </div>
 
             <div id="adminBody" style="display:none">
+              <!-- Version Info Section -->
+              <div class="admin-section">
+                <h4 style="margin:4px 0 6px;color:#eee">System Info</h4>
+                <div style="font-size:12px;color:#c9cacc;line-height:1.4;">
+                  <div><strong>Version:</strong> <span id="versionDisplay">v1.0.0</span></div>
+                  <div><strong>Environment:</strong> <span id="environmentDisplay">Loading...</span></div>
+                  <div><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">Jan 2025</span></div>
+                </div>
+              </div>
+              
               <div class="admin-section">
                 <h4 style="margin:4px 0 6px;color:#eee">Schedule</h4>
                 <div id="scheduleGrid"></div>
@@ -1133,10 +1149,25 @@
     adminUnlock.onclick=()=>{
       if(adminPin.value===ADMIN_PIN){
         pinMsg.style.display="none"; adminBody.style.display="block";
+        // Update version info
+        updateVersionDisplay();
         // Only render schedule editor now
         renderScheduleEditor();
       }else{ pinMsg.style.display="inline"; adminBody.style.display="none"; }
     };
+    
+    function updateVersionDisplay(){
+      $("#versionDisplay").textContent = VERSION;
+      $("#lastUpdatedDisplay").textContent = BUILD_DATE;
+      
+      // Detect environment
+      let env = "Unknown";
+      if(DEV) env = "Development (localhost)";
+      else if(TEST) env = "Test (test.tablet.msbdance.com)";
+      else env = "Production (tablet.msbdance.com)";
+      
+      $("#environmentDisplay").textContent = env;
+    }
 
     function renderScheduleEditor(){
       const DAY_LABEL={sun:"Sunday",mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday"};
