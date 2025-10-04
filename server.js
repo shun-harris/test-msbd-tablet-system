@@ -171,8 +171,10 @@ app.post("/create-payment-intent", async (req, res) => {
             description,
             confirmation_method: 'manual',
             confirm: true,
-            payment_method_types: ['card'], // Only allow card payments
-            return_url: `${req.protocol}://${req.get('host')}/options`, // Return URL for redirects
+            // Explicitly restrict to card only to disable Link / other wallets
+            payment_method_types: ['card'],
+            // Do NOT enable automatic_payment_methods (would re-enable Link/ApplePay etc.)
+            return_url: `${req.protocol}://${req.get('host')}/options`,
         };
 
         // Add customer to payment intent
@@ -311,7 +313,8 @@ app.post("/create-setup-intent", async (req, res) => {
         
         const setupIntent = await stripe.setupIntents.create({
             customer: customer.id,
-            automatic_payment_methods: { enabled: true },
+            // Restrict to card only; omit automatic_payment_methods to prevent Link
+            payment_method_types: ['card']
         });
         
         console.log("✅ Setup intent created:", setupIntent.id);
