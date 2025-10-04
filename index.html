@@ -4,11 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Check In Tablet System</title>
-</head>
-<body>
-  <div id="app"></div>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-
+  
   <!-- =============================== [SECTION: STYLES] (rarely changes) =============================== -->
   <style>
     :root{ --gold1:#f3dc8a; --gold2:#b8922a; --text:#f3f4f6; --muted:#c9cacc; }
@@ -38,6 +34,84 @@
     .btn-gold{ background:linear-gradient(180deg,var(--gold1),var(--gold2)); color:#1b1400; }
     .btn-dark{ background:#121316; color:var(--gold1); border:1px solid rgba(255,215,130,.35); }
     .btn-disabled{ background:#2a2a2a !important; color:#bbb !important; cursor:not-allowed !important; opacity:.9; }
+
+    /* Smooth slide-in animations for seamless transitions */
+    .slide-in-element {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .slide-in-element.animate {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    /* Staggered animation delays - minimal for overlapping transition */
+    .slide-in-element:nth-child(1) { transition-delay: 0s; }
+    .slide-in-element:nth-child(2) { transition-delay: 0.05s; }
+    .slide-in-element:nth-child(3) { transition-delay: 0.1s; }
+    .slide-in-element:nth-child(4) { transition-delay: 0.15s; }
+    .slide-in-element:nth-child(5) { transition-delay: 0.2s; }
+    .slide-in-element:nth-child(6) { transition-delay: 0.25s; }
+    
+    /* Special animation for logo */
+    .brand.slide-in-element {
+      transform: translateY(20px) scale(0.9);
+    }
+    
+    .brand.slide-in-element.animate {
+      transform: translateY(0) scale(1);
+    }
+    
+    /* Special animation for title */
+    h1.slide-in-element {
+      transform: translateY(25px);
+      letter-spacing: 2px;
+    }
+    
+    h1.slide-in-element.animate {
+      transform: translateY(0);
+      letter-spacing: 0.3px;
+    }
+    
+    /* Instant loading animation for visual continuity */
+    .instant-loader {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
+      z-index: 8888;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity 0.4s ease-out;
+    }
+    
+    .instant-loader.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loading-pulse {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold1), var(--gold2));
+      animation: loadingPulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 30px rgba(243, 220, 138, 0.3);
+    }
+    
+    @keyframes loadingPulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
+    }
 
     .input{
       width:min(760px,100%); margin:0 auto; padding:18px 20px;
@@ -150,10 +224,6 @@
       border-radius:inherit;
     }
 
-  </style>
-
-  <!-- =============================== [SECTION: STYLES – LINK BUTTON] =============================== -->
-  <style>
     /* small, quiet, centered link-style button */
     .minor-row{ display:flex; justify-content:center; margin-top:10px; }
     .link-btn{
@@ -163,12 +233,13 @@
       transition: color .15s, background .15s;
     }
     .link-btn:hover{ color:var(--gold1); background:rgba(255,255,255,.06); }
-  </style>
 
-  <!-- =============================== [SECTION: STYLES – NUMPAD HOST] =============================== -->
-  <style>
     .pad-host{ width:100%; max-width:420px; margin:14px auto 0; }
   </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
 
 
@@ -503,17 +574,24 @@
 
 
   /* =============================== [SECTION: APP BOOT + HTML] (rarely changes) =============================== */
+  // Add instant loading animation before DOMContentLoaded
+  const instantLoader = document.createElement('div');
+  instantLoader.className = 'instant-loader';
+  instantLoader.id = 'instantLoader';
+  instantLoader.innerHTML = '<div class="loading-pulse"></div>';
+  document.body.appendChild(instantLoader);
+  
   document.addEventListener("DOMContentLoaded", async ()=>{
     document.getElementById("app").innerHTML = `
       <div class="stage"><div class="stack">
         <!-- ========== [SECTION: SCREEN – WELCOME] (UI text changes) ========== -->
         <div id="scr-welcome" class="screen show">
-          <div class="brand">${LOGO_URL?`<img src="${LOGO_URL}" alt="logo" onerror="this.style.display='none'">`:""}</div>
-          <h1>WELCOME TO<br>MSBD STUDIO</h1>
-          <p class="sub">Check in below <span class="gold-icon">↓</span></p>
+          <div class="brand slide-in-element">${LOGO_URL?`<img src="${LOGO_URL}" alt="logo" onerror="this.style.display='none'">`:""}</div>
+          <h1 class="slide-in-element">WELCOME TO<br>MSBD STUDIO</h1>
+          <p class="sub slide-in-element">Check in below <span class="gold-icon">↓</span></p>
           <div style="display:grid; gap:14px; width:min(760px,100%); margin:0 auto;">
-            <button id="btnDropin" class="btn btn-gold">🎟 Drop-In Check-In</button>
-            <button id="btnMember" class="btn btn-dark">
+            <button id="btnDropin" class="btn btn-gold slide-in-element">🎟 Drop-In Check-In</button>
+            <button id="btnMember" class="btn btn-dark slide-in-element">
               <svg class="gold-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26">
                 <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
               </svg>
@@ -1167,6 +1245,26 @@
       SCHEDULE = next;
       const r = await saveScheduleCloud(SCHEDULE); if(r && r.ok) setSyncBadge("ok","Synced ✓"); else setSyncBadge("bad","Offline");
     };
+    
+    // Trigger smooth slide-in animations for seamless transitions from payment success
+    // Fade out instant loader and show content
+    const instantLoader = document.getElementById('instantLoader');
+    const slideElements = document.querySelectorAll('.slide-in-element');
+    
+    // Start content animations immediately
+    slideElements.forEach(element => {
+      element.classList.add('animate');
+    });
+    
+    // Fade out loader after content starts animating
+    setTimeout(() => {
+      if (instantLoader) {
+        instantLoader.classList.add('fade-out');
+        setTimeout(() => {
+          instantLoader.remove();
+        }, 400);
+      }
+    }, 150);
   });
   </script>
 

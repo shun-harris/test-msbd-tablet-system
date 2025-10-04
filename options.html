@@ -8,6 +8,7 @@
 <body>
   <div id="app"></div>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
 
   <style>
     :root{
@@ -22,7 +23,7 @@
     body{margin:0;background:#0f0f10;color:var(--text);font-family:Inter,system-ui,Arial}
 
     .stage{min-height:100vh;display:flex;align-items:center;justify-content:center;
-      background:radial-gradient(1200px 600px at 30% 10%, #1b1c20 0%, #0f1012 55%, #0c0d0f 100%);
+      background:radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
       padding:28px 12px 60px;}
     .stack{width:min(980px,92%);margin:0 auto}
 
@@ -68,6 +69,7 @@
     .pane.show{opacity:1;transform:none;position:relative;}
 
     .payTitle{text-align:center;margin:2px 0 12px;font-weight:800;opacity:.9;}
+    .payTitle > div:first-child{text-align:center;margin-bottom:16px;}
 
     /* QR Overlay */
     #qrOverlay{
@@ -77,6 +79,154 @@
     #qrBox{
       background:#141519;border-radius:16px;padding:22px;text-align:center;
       max-width:92%;box-shadow:0 0 40px rgba(0,0,0,.5);
+    }
+    
+    /* Stripe Card Overlay */
+    #stripeOverlay{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+      z-index:1000;align-items:center;justify-content:center;
+    }
+    #stripeBox{
+      background:#141519;border-radius:16px;padding:28px;text-align:left;
+      max-width:500px;width:92%;box-shadow:0 0 40px rgba(0,0,0,.5);
+    }
+    #stripeBox h3{
+      color:#f3f4f6;margin:0 0 20px;font-size:24px;font-weight:800;
+    }
+    #card-element{
+      background:#0f1012;border:1px solid var(--border);border-radius:12px;
+      padding:14px;margin-bottom:20px;
+    }
+    .stripe-buttons{
+      display:flex;gap:12px;justify-content:flex-end;
+    }
+    .stripe-buttons .btn{
+      height:48px;min-width:120px;
+    }
+    
+    /* Payment Success Animation */
+    .payment-success-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      pointer-events: none; /* Prevent any interaction during transition */
+    }
+    
+    /* Prevent scrollbar during success animation */
+    body.success-showing {
+      overflow: hidden !important;
+    }
+    
+    .payment-success-content {
+      text-align: center;
+      transform: scale(0.8);
+      opacity: 0;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .payment-success-content.show {
+      transform: scale(1);
+      opacity: 1;
+    }
+    
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      margin: 0 auto 24px;
+      position: relative;
+      box-shadow: 0 0 40px rgba(16, 185, 129, 0.4);
+    }
+    
+    .success-checkmark::after {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 12px;
+      border: 3px solid white;
+      border-top: none;
+      border-right: none;
+      transform: rotate(-45deg);
+      top: 50%;
+      left: 50%;
+      margin-top: -8px;
+      margin-left: -12px;
+      animation: checkmark 0.8s ease-in-out 0.3s both;
+    }
+    
+    @keyframes checkmark {
+      0% {
+        width: 0;
+        height: 0;
+      }
+      25% {
+        width: 0;
+        height: 12px;
+      }
+      100% {
+        width: 24px;
+        height: 12px;
+      }
+    }
+    
+    .success-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #f3f4f6;
+      margin-bottom: 12px;
+      animation: fadeInUp 0.6s ease-out 0.5s both;
+    }
+    
+    .success-subtitle {
+      font-size: 16px;
+      color: #9ca3af;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease-out 0.7s both;
+    }
+    
+    .success-amount {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--gold1);
+      margin-bottom: 24px;
+      animation: fadeInUp 0.6s ease-out 0.9s both;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .success-pulse {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.3);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1.5);
+        opacity: 0;
+      }
     }
     #qrImg{width:320px;height:320px;display:block;margin:0 auto 16px;background:#fff;border-radius:12px;}
     /* center the overlay "I'm Done" button */
@@ -217,7 +367,59 @@
               <p>Please head to registration to finish your purchase.</p>
               <button id="cashOk" class="btn btn-gold">OK</button>
             </div>
-          </div>`;
+          </div>
+
+          <!-- Payment Success Overlay -->
+          <div class="payment-success-overlay" id="paymentSuccessOverlay">
+            <div class="payment-success-content" id="paymentSuccessContent">
+              <div class="success-checkmark">
+                <div class="success-pulse"></div>
+              </div>
+              <div class="success-title">Payment Successful</div>
+              <div class="success-subtitle">Thank you for your purchase!</div>
+              <div class="success-amount" id="successAmount"></div>
+            </div>
+          </div>
+          
+          <!-- Stripe Card Overlay -->
+          <div id="stripeOverlay">
+            <div id="stripeBox">
+              <h3 id="stripe-modal-title">Enter Card Information</h3>
+              
+              <!-- Quantity Selector (only for single classes) -->
+              <div id="quantity-section" style="background: #0f1012; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <span style="font-weight: 700; color: #f3f4f6;">Quantity:</span>
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <button type="button" id="qty-minus" class="btn" style="height: 40px; min-width: 40px; padding: 0;">−</button>
+                    <span id="quantity-display" style="font-size: 18px; font-weight: 800; min-width: 20px; text-align: center; color: #f3f4f6;">1</span>
+                    <button type="button" id="qty-plus" class="btn" style="height: 40px; min-width: 40px; padding: 0;">+</button>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="color: #9ca3af;">$20 per class</span>
+                  <span style="font-size: 20px; font-weight: 800; color: var(--gold1);" id="total-display">$20</span>
+                </div>
+              </div>
+              
+              <form id="payment-form">
+                <div id="card-element"></div>
+                <p id="card-error" role="alert" style="color: #ff6b6b; display: none; margin: 10px 0;"></p>
+                <div class="stripe-buttons">
+                  <button type="button" id="stripe-cancel" class="btn">Cancel</button>
+                  <button type="submit" id="stripe-submit" class="btn btn-gold">Confirm Purchase</button>
+                </div>
+              </form>
+              
+              <div id="saved-cards-section" style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <h4 style="color: #f3f4f6; margin: 0 0 12px;">Or use a saved card:</h4>
+                <div id="saved-cards" class="fieldCard">
+                  <!-- Cards will be dynamically populated here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
 
         // wire buttons
         const panePrimary=$("#panePrimary"),panePay=$("#panePay");
@@ -252,8 +454,20 @@
           console.error("Done button not found"); // Log error if button is missing
         }
 
+        // Add quantity tracking
+        let classQuantity = 1;
+        
+        function updateClassTotal() {
+          const total = classQuantity * 20;
+          const quantityDisplay = document.getElementById('quantity-display');
+          const totalDisplay = document.getElementById('total-display');
+          if (quantityDisplay) quantityDisplay.textContent = classQuantity;
+          if (totalDisplay) totalDisplay.textContent = `$${total}`;
+        }
+        
         function openPayPane(kind){
           ctx.kind=kind;
+          classQuantity = 1; // Reset quantity
           payTitle.textContent=(kind==="membership")?"Unlimited (Membership) — choose a payment method":"Single Class — choose a payment method";
           let buttons=`
             <button id="payCard" class="btn btn-gold">Enter card info</button>
@@ -263,10 +477,8 @@
           hide(panePrimary);show(panePay);
 
           $("#payBack").onclick=()=>{hide(panePay);show(panePrimary)};
-          $("#payCard").onclick=async()=>{
-            const product=(ctx.kind==="membership")?"membership":"single";
-            let url=await routeViaMakeDirect({phone,name,product});
-            if(url) window.location.href=url; else alert("Checkout unavailable.");
+          $("#payCard").onclick=()=>{
+            showStripeCardForm();
           };
           $("#payQR").onclick=async()=>{
             const btn=$("#payQR");btn.textContent="Generating QR…";btn.disabled=true;
@@ -301,6 +513,296 @@
         } else {
           $("#notMeGoBack").style.display = "none";
         }
+
+        // Stripe overlay functionality
+        const stripeOverlay = document.getElementById('stripeOverlay');
+        
+        function showStripeCardForm() {
+          // Update modal title and show/hide quantity based on product type
+          const modalTitle = document.getElementById('stripe-modal-title');
+          const quantitySection = document.getElementById('quantity-section');
+          
+          if (ctx.kind === 'membership') {
+            modalTitle.textContent = 'Purchase Unlimited Membership';
+            quantitySection.style.display = 'none';
+          } else {
+            modalTitle.textContent = 'Purchase Single Classes';
+            quantitySection.style.display = 'block';
+            classQuantity = 1; // Reset quantity
+            updateClassTotal();
+            
+            // Add quantity button handlers
+            document.getElementById('qty-minus').onclick = () => {
+              if(classQuantity > 1) {
+                classQuantity--;
+                updateClassTotal();
+              }
+            };
+            document.getElementById('qty-plus').onclick = () => {
+              if(classQuantity < 10) { // Max 10 classes
+                classQuantity++;
+                updateClassTotal();
+              }
+            };
+          }
+          
+          stripeOverlay.style.display = 'flex';
+        }
+        
+        function hideStripeCardForm() {
+          stripeOverlay.style.display = 'none';
+        }
+        
+        // Cancel button functionality
+        document.getElementById('stripe-cancel').onclick = hideStripeCardForm;
+
+
+
+        // Stripe Elements - using test keys for development
+        const stripe = Stripe('pk_test_51LapNkD6NCrArHXBoKFz9KVTLcNnx6pAcql7bs3YxK3qCXxVhtdBOzCupwMv1J5Io3oPwjqFUGPTJrxnWumumJww00eyBAuzLh');
+        const elements = stripe.elements();
+        const cardElement = elements.create('card', {
+          style: {
+            base: {
+              color: '#f3f4f6',
+              fontFamily: 'Inter, system-ui, Arial',
+              fontSize: '16px',
+              '::placeholder': {
+                color: '#9ca3af',
+              },
+            },
+          },
+        });
+        cardElement.mount('#card-element');
+
+        const paymentForm = document.getElementById('payment-form');
+        const cardError = document.getElementById('card-error');
+        const submitButton = document.getElementById('stripe-submit');
+        let currentProductType = '';
+        let clientSecret = '';
+
+        // API base URL - update this to your server URL
+        const API_BASE = 'http://localhost:3000';
+        const DEV_MODE = false; // Set to false when server is running
+
+        // Get product type and pricing
+        function getProductInfo() {
+          const productType = ctx.kind || 'single';
+          let amount;
+          if (productType === 'membership') {
+            amount = 89.00;
+          } else {
+            amount = classQuantity * 20.00; // $20 per class
+          }
+          return { productType, amount, quantity: classQuantity };
+        }
+
+        // Load saved cards
+        async function loadSavedCards() {
+          try {
+            let data;
+            
+            if (DEV_MODE) {
+              // Mock data for development
+              data = {
+                payment_methods: [
+                  { id: 'pm_mock_1', brand: 'visa', last4: '4242' },
+                  { id: 'pm_mock_2', brand: 'mastercard', last4: '1234' }
+                ]
+              };
+            } else {
+              const response = await fetch(`${API_BASE}/get-payment-methods`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone })
+              });
+              
+              data = await response.json();
+            }
+            const savedCardsContainer = document.getElementById('saved-cards');
+            savedCardsContainer.innerHTML = '';
+            
+            if (data.payment_methods && data.payment_methods.length > 0) {
+              data.payment_methods.forEach((card) => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'kv';
+                cardDiv.style.cursor = 'pointer';
+                cardDiv.innerHTML = `
+                  <div class="k">Card ending in</div>
+                  <div class="v">${card.brand.toUpperCase()} •••• ${card.last4}</div>
+                `;
+                cardDiv.onclick = () => useStoredCard(card);
+                savedCardsContainer.appendChild(cardDiv);
+              });
+            } else {
+              savedCardsContainer.innerHTML = '<p style="color: #9ca3af; text-align: center;">No saved cards</p>';
+            }
+          } catch (error) {
+            console.error('Error loading saved cards:', error);
+          }
+        }
+
+        // Use stored card for payment
+        async function useStoredCard(card) {
+          try {
+            submitButton.textContent = 'Processing...';
+            submitButton.disabled = true;
+            
+            const { productType, amount } = getProductInfo();
+            
+            const response = await fetch(`${API_BASE}/create-payment-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phone,
+                name,
+                amount,
+                product_type: productType,
+                payment_method_id: card.id
+              })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            
+            handlePaymentResult(data);
+          } catch (error) {
+            cardError.textContent = error.message;
+            cardError.style.display = 'block';
+            submitButton.textContent = 'Confirm Purchase';
+            submitButton.disabled = false;
+          }
+        }
+
+        // Handle payment result
+        function handlePaymentResult(data) {
+          if (data.status === 'succeeded') {
+            showPaymentSuccess();
+          } else if (data.status === 'requires_action') {
+            stripe.confirmCardPayment(data.client_secret).then(function(result) {
+              if (result.error) {
+                cardError.textContent = result.error.message;
+                cardError.style.display = 'block';
+              } else {
+                handlePaymentResult({status: 'succeeded'});
+              }
+            });
+          } else {
+            throw new Error('Payment failed');
+          }
+        }
+        
+        // Show elegant payment success animation
+        function showPaymentSuccess() {
+          hideStripeCardForm();
+          
+          const { amount } = getProductInfo();
+          const successOverlay = document.getElementById('paymentSuccessOverlay');
+          const successContent = document.getElementById('paymentSuccessContent');
+          const successAmount = document.getElementById('successAmount');
+          
+          // Prevent scrollbar during animation
+          document.body.classList.add('success-showing');
+          
+          successAmount.textContent = `$${amount.toFixed(2)}`;
+          successOverlay.style.display = 'flex';
+          
+          // Trigger animation
+          setTimeout(() => {
+            successContent.classList.add('show');
+          }, 100);
+          
+          // Start slide-out animation and navigation after 2 seconds (reduced from 3)
+          setTimeout(() => {
+            // Start navigation immediately while slide-out begins
+            location.href = SETTINGS.HOME_URL;
+            
+            // Start slide-out animation at the same time
+            successContent.style.transform = 'translateY(-50px)';
+            successContent.style.opacity = '0';
+            successContent.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+          }, 2000);
+        }
+
+        // Form submission for new cards
+        paymentForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          cardError.style.display = 'none';
+          submitButton.textContent = 'Processing...';
+          submitButton.disabled = true;
+          
+          try {
+            if (DEV_MODE) {
+              // Mock successful payment for development
+              setTimeout(() => {
+                showPaymentSuccess();
+                submitButton.textContent = 'Confirm Purchase';
+                submitButton.disabled = false;
+              }, 2000);
+              return;
+            }
+            // First create setup intent to save the card
+            const setupResponse = await fetch(`${API_BASE}/create-setup-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone, name })
+            });
+            
+            const setupData = await setupResponse.json();
+            if (setupData.error) throw new Error(setupData.error);
+            
+            // Confirm the setup intent to save the card
+            const { setupIntent, error: setupError } = await stripe.confirmCardSetup(
+              setupData.client_secret,
+              {
+                payment_method: {
+                  card: cardElement,
+                  billing_details: { name }
+                }
+              }
+            );
+            
+            if (setupError) {
+              throw new Error(setupError.message);
+            }
+            
+            // Now create payment intent with the saved card
+            const { productType, amount } = getProductInfo();
+            
+            const paymentResponse = await fetch(`${API_BASE}/create-payment-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phone,
+                name,
+                amount,
+                product_type: productType,
+                payment_method_id: setupIntent.payment_method
+              })
+            });
+            
+            const paymentData = await paymentResponse.json();
+            if (paymentData.error) throw new Error(paymentData.error);
+            
+            handlePaymentResult(paymentData);
+            
+          } catch (error) {
+            cardError.textContent = error.message;
+            cardError.style.display = 'block';
+            submitButton.textContent = 'Confirm Purchase';
+            submitButton.disabled = false;
+          }
+        });
+
+        // Update showStripeCardForm to load saved cards
+        const originalShowStripeCardForm = showStripeCardForm;
+        showStripeCardForm = function() {
+          originalShowStripeCardForm();
+          loadSavedCards();
+        };
       }
 
       renderMain();
