@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
+## [2.4.8] - 2025-10-04
+### Added
+- Auto-switch test
+
 ## [2.4.7] - 2025-10-04
 ### Added
 - Test deployment
