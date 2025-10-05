@@ -124,7 +124,7 @@ app.get("/test/environment", (req, res) => {
         determination: det.reason,
         stripe_keys: usingLiveKeys ? 'LIVE' : 'TEST',
         timestamp: new Date().toISOString(),
-        version: "v2.4.0"
+        version: 'v' + (VERSION_INFO.version || '0.0.0')
     });
 });
 

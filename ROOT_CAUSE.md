@@ -84,6 +84,180 @@ The production backend constant `REMOTE_PROD_URL` used a domain missing the requ
 - `server.js` (regex update and comments).
 
 ---
+## 3. Deploy Run From Non-Main Branch (Potential Drift)
+**Date observed:** 2025-10-04  
+**Resolved:** 2025-10-04  
+
+### Symptom
+Test deployment script could be invoked while HEAD was on a feature / non-main branch; version bump + tag would not represent `main` history.
+
+### Impact
+Risk of semantic versions pointing at commits not merged to `main`, complicating production promotion and rollback mapping.
+
+### Root Cause (Single Statement)
+`deploy.ps1` lacked branch validation and proceeded regardless of current branch.
+
+### Contributing Factors
+- Initial focus on velocity over guardrails.
+- No cleanliness (uncommitted changes) enforcement.
+- Automated bump increased consequence of misuse.
+
+### Fixes Implemented
+- Added branch check; abort if not on `main`.
+- Added auto fast-checkout to `main` when safe.
+- Refuse to proceed with a dirty working tree.
+
+### Validation
+1. Ran from feature branch → aborted with explicit message.
+2. Ran from `main` → version bumped & deployed to test successfully.
+
+### Preventative Actions
+- Keep single canonical deploy branch for test.
+- (Future) CI workflow replicating same guard.
+
+### Related Files
+- `deploy.ps1`.
+
+---
+## 4. Unsafe Direct Production Deploy Path
+**Date observed:** Historical (pre 2025-10-04)  
+**Resolved:** 2025-10-04  
+
+### Symptom
+Possible to push directly to production infra without prior test verification.
+
+### Impact
+Increased risk of shipping untested code to prod; reduced auditability.
+
+### Root Cause (Single Statement)
+Single deployment script multiplexed test and prod flows without gating.
+
+### Contributing Factors
+- Early mono-branch workflow.
+- Lack of promotion concept.
+
+### Fixes Implemented
+- Introduced `prod-release` branch (promotion target only).
+- Added `promote-to-prod.ps1` fast-forward flow.
+- Gated legacy prod path behind `-ForceLegacyProd`.
+
+### Validation
+1. Legacy prod deploy without flag → aborted.
+2. Promotion script advanced prod-release to tested commit hash.
+
+### Preventative Actions
+- Maintain zero mutation promotion (fast-forward only).
+- Optionally enforce ancestry check in CI.
+
+### Related Files
+- `promote-to-prod.ps1`, `deploy.ps1`.
+
+---
+## 5. Stripe Card Input Interference (Focus / Typing Blocked)
+**Date observed:** 2025-10-03  
+**Resolved:** 2025-10-04  
+
+### Symptom
+Card number field intermittently refused focus or swallowed keystrokes.
+
+### Impact
+Slowed payment capture; user frustration; risk of abandoning on-tablet payment.
+
+### Root Cause (Single Statement)
+Over-broad overlay & event interception plus unnecessary payment surfaces (Link) interfering with Stripe Element iframe focus.
+
+### Contributing Factors
+- Generic DOM blockers.
+- Allowing default additional payment method UI.
+- Limited observability pre-fix.
+
+### Fixes Implemented
+- Restricted `payment_method_types` to `['card']`.
+- Narrowed overlay scope.
+- Added `?stripeDebug=1` instrumentation overlay.
+
+### Validation
+1. Post-change: consistent typing success across multiple attempts.
+2. DOM inspection: only card Element present.
+
+### Preventative Actions
+- Keep surface minimal until additional methods required.
+- Use debug overlay for future DOM / focus regressions.
+
+### Related Files
+- `options.html`, `server.js` (intent creation constraints).
+
+---
+## 6. Customer Duplication & Incomplete Saved Cards
+**Date observed:** 2025-10-03 (pattern)  
+**Resolved:** 2025-10-04  
+
+### Symptom
+Multiple Stripe customers per real person; saved cards occasionally absent.
+
+### Impact
+Fragmented payment history; reduced one-tap reuse reliability.
+
+### Root Cause (Single Statement)
+Phone-only lookups with inconsistent fallback email generation and missing `metadata.phone` normalization.
+
+### Contributing Factors
+- Legacy customers lacking email/phone fields.
+- No canonical identifier precedence.
+- No retroactive metadata backfill.
+
+### Fixes Implemented
+- Ordered lookup: email → metadata.phone → phone.
+- Creation always sets `metadata.phone` & synthetic fallback email if needed.
+- Reuse logic stops at first high-confidence match.
+
+### Validation
+1. Lookup returns single canonical customer for previously duplicated identity.
+2. Saved cards list stable across repeated loads.
+
+### Preventative Actions
+- Consider one-time backfill adding `metadata.phone`.
+- Emit debug logs for ambiguous matches.
+
+### Related Files
+- `server.js` customer resolution logic.
+
+---
+## 7. Version Drift & Inconsistent Changelog Entries
+**Date observed:** 2025-10-03 (risk)  
+**Resolved:** 2025-10-04  
+
+### Symptom
+Manual versioning occasionally skipped; changelog and deployed code diverged.
+
+### Impact
+Harder incident correlation; ambiguous rollback targets.
+
+### Root Cause (Single Statement)
+Human-in-the-loop semantic version management without enforced commit classification.
+
+### Contributing Factors
+- Rapid iteration cadence.
+- No single authoritative version manifest.
+
+### Fixes Implemented
+- Added `version.json` authoritative source.
+- `bump-version.ps1` parses commit messages (BREAKING/! → major, feat → minor, else patch).
+- Injects new changelog section automatically.
+
+### Validation
+1. Test feat commit bumped minor.
+2. Non-feat commit bumped patch.
+3. Changelog updated at top with correct date/version.
+
+### Preventative Actions
+- Maintain conventional commits.
+- (Future) CI verify version bump when server/payment code changes.
+
+### Related Files
+- `bump-version.ps1`, `deploy.ps1`, `CHANGELOG.md`, `version.json`.
+
+---
 ## General Template (For Future Incidents)
 Copy & fill:
 ```
@@ -117,4 +291,4 @@ Related Commits / Files:
 ```
 
 ---
-_Last updated: 2025-10-04_
+_Last updated: 2025-10-05_
