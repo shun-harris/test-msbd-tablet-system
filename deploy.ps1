@@ -13,6 +13,19 @@ param(
 try {
 switch ($Target) {
     "test" {
+    # Enforce running from main branch for test deployments
+    $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+    if ($currentBranch -ne 'main') {
+        $status = git status --porcelain 2>$null
+        if ($status) {
+            Write-Host "Cannot auto-switch branches: working tree not clean. Commit/stash changes then re-run." -ForegroundColor Red
+            Write-Host "Current branch: $currentBranch (expected: main)" -ForegroundColor Yellow
+            return
+        }
+        Write-Host "Auto-switching from $currentBranch to main for test deploy enforcement..." -ForegroundColor Yellow
+        git checkout main | Out-Null
+        Write-Host "Switched to main." -ForegroundColor Green
+    }
     Write-Host "Bumping version ($BumpType) for TEST deployment..." -ForegroundColor Green
     $bumpNotes = if([string]::IsNullOrWhiteSpace($Notes)) { 'Test deployment' } else { $Notes }
     & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\bump-version.ps1" $BumpType -Notes $bumpNotes
