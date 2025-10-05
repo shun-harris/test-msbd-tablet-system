@@ -55,6 +55,17 @@ function getStripeForRequest(req){
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Load version metadata once at startup (graceful fallback if missing)
+let VERSION_INFO = { version: '0.0.0', buildDate: null };
+try {
+    const fs = require('fs');
+    if (fs.existsSync(__dirname + '/version.json')) {
+        VERSION_INFO = JSON.parse(fs.readFileSync(__dirname + '/version.json','utf8'));
+    }
+} catch (e) {
+    console.warn('⚠ Could not read version.json:', e.message);
+}
+
 // CORS configuration (explicit whitelist so we can safely allow localhost + test hitting prod API)
 const ALLOWED_ORIGINS = [
     'https://tablet.msbdance.com',
@@ -386,7 +397,9 @@ app.get("/health", (req, res) => {
         forwardedHost: det.forwarded || null,
         environment: det.env,
         reason: det.reason,
-        stripe: det.env === 'production' ? 'LIVE MODE' : 'TEST MODE'
+        stripe: det.env === 'production' ? 'LIVE MODE' : 'TEST MODE',
+        version: VERSION_INFO.version,
+        buildDate: VERSION_INFO.buildDate || null
     });
 });
 
