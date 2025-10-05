@@ -588,7 +588,8 @@
         const BACKEND_MODE = (RAW_BACKEND_MODE === 'local' ? 'local' : 'remote');
         const LOCAL_BACKEND_URL = 'http://localhost:3000';
         const REMOTE_TEST_URL = 'https://test-msbd-tablet-system-production.up.railway.app';
-        const REMOTE_PROD_URL = 'https://msbd-tablet-system-production.up.railway.app';
+  // Correct production backend domain (was missing leading 'prod-')
+  const REMOTE_PROD_URL = 'https://prod-msbd-tablet-system-production.up.railway.app';
 
         // API base selection
         let API_BASE;

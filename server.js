@@ -18,9 +18,12 @@ function detectEnvironment(req){
     if (rawHost === 'test.tablet.msbdance.com') return { env:'test', reason:'test subdomain match', host:rawHost, forwarded };
 
     // 3. Railway provided domain patterns
-    // Current naming: test-msbd-tablet-system-production.up.railway.app (test) / msbd-tablet-system-production.up.railway.app (future prod)
+    // Examples:
+    //   test-msbd-tablet-system-production.up.railway.app  (test)
+    //   prod-msbd-tablet-system-production.up.railway.app  (production)
+    //   msbd-tablet-system-production.up.railway.app       (legacy/alt prod)
     if (/test-msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'test', reason:'railway test pattern', host:rawHost, forwarded };
-    if (/msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'production', reason:'railway production pattern', host:rawHost, forwarded };
+    if (/(prod-)?msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'production', reason:'railway production pattern', host:rawHost, forwarded };
 
     // 4. Local / fallback
     if (/^(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(rawHost)) return { env:'local', reason:'localhost host', host:rawHost, forwarded };
