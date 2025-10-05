@@ -18,9 +18,13 @@ function detectEnvironment(req){
     if (rawHost === 'test.tablet.msbdance.com') return { env:'test', reason:'test subdomain match', host:rawHost, forwarded };
 
     // 3. Railway provided domain patterns
-    // Current naming: test-msbd-tablet-system-production.up.railway.app (test) / msbd-tablet-system-production.up.railway.app (future prod)
+    // Current naming patterns:
+    //  - test-msbd-tablet-system-production.up.railway.app  (test)
+    //  - prod-msbd-tablet-system-production.up.railway.app  (prod dedicated)
+    //  - msbd-tablet-system-production.up.railway.app       (legacy / fallback prod pattern)
     if (/test-msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'test', reason:'railway test pattern', host:rawHost, forwarded };
-    if (/msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'production', reason:'railway production pattern', host:rawHost, forwarded };
+    if (/prod-msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'production', reason:'railway prod pattern (prod-msbd)', host:rawHost, forwarded };
+    if (/msbd-tablet-system.*\.up\.railway\.app$/.test(rawHost)) return { env:'production', reason:'railway prod pattern (legacy)', host:rawHost, forwarded };
 
     // 4. Local / fallback
     if (/^(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(rawHost)) return { env:'local', reason:'localhost host', host:rawHost, forwarded };
@@ -56,6 +60,8 @@ const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGINS = [
     'https://tablet.msbdance.com',
     'https://test.tablet.msbdance.com',
+    'https://prod-msbd-tablet-system-production.up.railway.app',
+    'https://test-msbd-tablet-system-production.up.railway.app',
     'http://localhost',
     'http://127.0.0.1'
 ];

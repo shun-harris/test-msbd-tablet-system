@@ -7,7 +7,8 @@ param(
     [string]$Target,
     [ValidateSet("auto","patch","minor","major")]
     [string]$BumpType = 'auto',
-    [string]$Notes = ''
+    [string]$Notes = '',
+    [switch]$ForceLegacyProd
 )
 
 try {
@@ -30,44 +31,43 @@ switch ($Target) {
         Write-Host "Test deployment complete!" -ForegroundColor Green
     }
     "prod" {
-        Write-Host "Using existing version for PRODUCTION (no bump)." -ForegroundColor Yellow
+        if (-not $ForceLegacyProd) {
+            Write-Host "🚫 Direct 'deploy.ps1 prod' path is deprecated." -ForegroundColor Red
+            Write-Host "Use ./promote-to-prod.ps1 after deploying & soaking TEST." -ForegroundColor Yellow
+            Write-Host "If you REALLY need legacy behavior: add -ForceLegacyProd" -ForegroundColor DarkYellow
+            return
+        }
+        Write-Host "⚠ LEGACY PROD DEPLOY (bypasses promotion gate)" -ForegroundColor Red
         $ver = (Get-Content version.json -Raw | ConvertFrom-Json).version
-        Write-Host "Deploying existing v$ver to PRODUCTION..." -ForegroundColor Yellow
-
-        # Create CNAME for production environment
-        Write-Host "Setting up CNAME for tablet.msbdance.com..." -ForegroundColor Cyan
+        Write-Host "Deploying existing v$ver directly to PRODUCTION..." -ForegroundColor Yellow
         "tablet.msbdance.com" | Out-File -FilePath "CNAME" -Encoding ASCII -NoNewline
-
         git add CNAME
-        git commit -m "v${ver}: Prod deploy (reuse version)" 2>$null | Out-Null
-        # Re-tag (force) in case previous tag message differs; no bump
+        git commit -m "v${ver}: Legacy direct prod deploy" 2>$null | Out-Null
         git tag -f "v${ver}" 2>$null | Out-Null
         git push prod main --follow-tags
-        Write-Host "Production deployment complete for v$ver (no version change)." -ForegroundColor Green
+        Write-Host "Legacy production deployment complete. (Consider using promotion flow next time.)" -ForegroundColor Green
     }
     "both" {
-        Write-Host "Deploying to BOTH test and production (single bump applied on TEST only)..." -ForegroundColor Cyan
-
-        # --- Test leg with bump ---
-        Write-Host "Setting up CNAME for test.tablet.msbdance.com..." -ForegroundColor Cyan
+        if (-not $ForceLegacyProd) {
+            Write-Host "🚫 'both' target deprecated. Run test deploy first, then promote via promote-to-prod.ps1" -ForegroundColor Red
+            Write-Host "To force old combined flow, add -ForceLegacyProd (not recommended)." -ForegroundColor Yellow
+            return
+        }
+        Write-Host "⚠ LEGACY BOTH DEPLOY (combined)" -ForegroundColor Red
         "test.tablet.msbdance.com" | Out-File -FilePath "CNAME" -Encoding ASCII -NoNewline
         git add .
-    $bumpNotes = if([string]::IsNullOrWhiteSpace($Notes)) { 'Test+Prod deployment' } else { $Notes }
-    & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\bump-version.ps1" $BumpType -Notes $bumpNotes
+        $bumpNotes = if([string]::IsNullOrWhiteSpace($Notes)) { 'Legacy both deployment' } else { $Notes }
+        & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\bump-version.ps1" $BumpType -Notes $bumpNotes
         $ver = (Get-Content version.json -Raw | ConvertFrom-Json).version
-        git commit -m "v${ver}: Test deploy"
+        git commit -m "v${ver}: Legacy both test deploy"
         git tag -f "v${ver}"
         git push test main --follow-tags
-
-        # --- Prod leg WITHOUT bump, reuse same version ---
-        Write-Host "Setting up CNAME for tablet.msbdance.com..." -ForegroundColor Cyan
         "tablet.msbdance.com" | Out-File -FilePath "CNAME" -Encoding ASCII -NoNewline
         git add CNAME
-        git commit -m "v${ver}: Prod deploy (reuse version)" 2>$null | Out-Null
+        git commit -m "v${ver}: Legacy both prod deploy" 2>$null | Out-Null
         git tag -f "v${ver}" 2>$null | Out-Null
         git push prod main --follow-tags
-
-        Write-Host "Both deployments complete for v$ver (single version)." -ForegroundColor Green
+        Write-Host "Legacy BOTH deployment complete for v$ver." -ForegroundColor Green
     }
 }
 }
