@@ -51,9 +51,10 @@ try {
     git add CNAME
     git commit -m "chore: Update CNAME to production domain (tablet.msbdance.com)" | Out-Null
 
-    # Push fast-forward (or create) to prod remote
+    # Push with force flag to handle CNAME divergence
+    # CNAME differs between test and prod, so branches naturally diverge
     # Use explicit string to avoid PowerShell parsing the colon in $prodBranch:$prodBranch
-    git push prod "$prodBranch`:$prodBranch" | Out-Null
+    git push prod "$prodBranch`:$prodBranch" --force-with-lease | Out-Null
 
     Write-Step "Promotion complete. prod/$prodBranch now at HEAD (v$version)."
     Write-Step "CNAME updated to tablet.msbdance.com for production."
