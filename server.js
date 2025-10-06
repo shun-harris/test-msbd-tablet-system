@@ -937,6 +937,30 @@ app.get('/auth/session-check', requirePinSession, (req,res)=>{
 });
 
 // Explicit revoke endpoint (called on cancel/back/payment success) to force re-entry next time
+// Admin PIN reset - requires admin key to reset a customer's PIN
+app.post('/auth/admin-reset-pin', (req,res)=>{
+    const { phone, email, adminKey } = req.body;
+    const identifier = phone || email;
+    if(!identifier) return res.status(400).json({ ok:false, error:'phone or email required' });
+    if(!adminKey) return res.status(400).json({ ok:false, error:'adminKey required' });
+    
+    // Validate admin key
+    if(adminKey !== PIN_ADMIN_KEY){
+        console.log(`❌ [ADMIN RESET] Invalid admin key attempt for ${identifier}`);
+        return res.status(403).json({ ok:false, error:'Invalid admin key' });
+    }
+    
+    // Reset the PIN by deleting the credential row
+    db.run('DELETE FROM pin_credentials WHERE identifier=?', [identifier], function(err){
+        if(err){
+            console.error('❌ [ADMIN RESET] Database error:', err);
+            return res.status(500).json({ ok:false, error:'Database error' });
+        }
+        console.log(`✅ [ADMIN RESET] PIN reset for ${identifier} (rows affected: ${this.changes})`);
+        res.json({ ok:true, message:'PIN reset successfully', rowsAffected: this.changes });
+    });
+});
+
 app.post('/auth/revoke-session', (req,res)=>{
     const auth = (req.get('authorization')||'').trim();
     if(auth.startsWith('Bearer ')){

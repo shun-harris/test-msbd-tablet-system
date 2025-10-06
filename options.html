@@ -1211,6 +1211,7 @@
                   <input id="pinEntry" type="password" pattern="\\d{4,6}" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN" required style="padding:10px;border:1px solid var(--border);border-radius:8px;background:#0c0d0f;color:#fff;font-size:20px;letter-spacing:6px;text-align:center;">
                   <button style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;height:54px;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Unlock</button>
                   <div id="pinVerifyMsg" style="color:#ff9aa1;font-size:12px;display:none"></div>
+                  <button type="button" id="forgotPinBtn" style="margin-top:8px;padding:10px;border:1px solid var(--border);background:#1d1f23;color:#cdd0d4;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500">Forgot PIN? (Staff Assistance)</button>
                 </form>`;
                 const f = gate.querySelector('#pinVerifyForm');
                 const attemptsRemainEl = gate.querySelector('#pinAttemptsRemain');
@@ -1279,6 +1280,66 @@
                     }, 600);
                   }, 0);
                 };
+                
+                // Forgot PIN button handler
+                const forgotBtn = gate.querySelector('#forgotPinBtn');
+                if(forgotBtn){
+                  forgotBtn.onclick = async ()=>{
+                    // Show admin PIN prompt
+                    gate.innerHTML = `
+                      <div style="font-weight:700;margin-bottom:12px;font-size:14px;color:#fca5a5">PIN Reset Required</div>
+                      <div style="font-size:12px;opacity:.75;margin-bottom:16px">Please ask a staff member to enter the admin PIN to reset your customer PIN.</div>
+                      <form id="adminResetForm" style="display:grid;gap:10px">
+                        <input id="adminPinEntry" type="password" inputmode="numeric" autocomplete="off" placeholder="Admin PIN" required style="padding:10px;border:1px solid var(--border);border-radius:8px;background:#0c0d0f;color:#fff;font-size:16px;letter-spacing:2px;text-align:center;">
+                        <button style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;height:54px;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Reset Customer PIN</button>
+                        <button type="button" id="cancelAdminReset" style="padding:10px;border:1px solid var(--border);background:#1d1f23;color:#cdd0d4;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
+                        <div id="adminResetMsg" style="color:#ff9aa1;font-size:12px;display:none"></div>
+                      </form>`;
+                    
+                    const adminForm = gate.querySelector('#adminResetForm');
+                    const adminMsg = gate.querySelector('#adminResetMsg');
+                    const cancelBtn = gate.querySelector('#cancelAdminReset');
+                    
+                    cancelBtn.onclick = ()=>{ renderPinGate(); };
+                    
+                    adminForm.onsubmit = async (e)=>{
+                      e.preventDefault();
+                      const adminKey = gate.querySelector('#adminPinEntry').value.trim();
+                      adminMsg.style.display='none';
+                      
+                      try {
+                        const response = await fetch(`${API_BASE}/auth/admin-reset-pin`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ phone, email, adminKey })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if(response.ok){
+                          // Success! Show confirmation and reload PIN gate
+                          gate.innerHTML = `
+                            <div style="font-weight:700;color:#b9f6ce;background:#1b2a19;border:1px solid #2a5a36;padding:16px;border-radius:10px;font-size:14px;text-align:center;margin-bottom:16px;">
+                              ✓ PIN Reset Successful
+                            </div>
+                            <div style="font-size:12px;opacity:.75;margin-bottom:16px;">The customer can now create a new PIN.</div>
+                            <button id="createNewPinBtn" style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;width:100%;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Create New PIN</button>
+                          `;
+                          
+                          const createBtn = gate.querySelector('#createNewPinBtn');
+                          createBtn.onclick = ()=>{ renderPinGate(); };
+                        } else {
+                          adminMsg.textContent = data.error || 'Failed to reset PIN';
+                          adminMsg.style.display='block';
+                        }
+                      } catch(err){
+                        console.error('[ADMIN RESET] Error:', err);
+                        adminMsg.textContent = 'Network error – check connection';
+                        adminMsg.style.display='block';
+                      }
+                    };
+                  };
+                }
             }
         }
         window.__expirePinSession = function(){ clearSessionToken(); console.log('[PIN] Session cleared'); };
