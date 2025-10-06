@@ -951,7 +951,11 @@ app.post('/auth/admin-reset-pin', (req,res)=>{
     }
     
     // Reset the PIN by deleting the credential row
-    db.run('DELETE FROM pin_credentials WHERE identifier=?', [identifier], function(err){
+    // Use phone OR email column depending on which is provided
+    const whereClause = phone ? 'phone=?' : 'email=?';
+    const whereValue = phone || email;
+    
+    db.run(`DELETE FROM pin_credentials WHERE ${whereClause}`, [whereValue], function(err){
         if(err){
             console.error('❌ [ADMIN RESET] Database error:', err);
             return res.status(500).json({ ok:false, error:'Database error' });
