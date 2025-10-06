@@ -32,18 +32,23 @@
 
     .btn{
       display:flex; align-items:center; justify-content:center; gap:12px;
-      width:100%; height:84px; border-radius:16px; border:0; cursor:pointer;
-      font-weight:800; font-size:clamp(18px,3.8vw,26px);
-      transition:transform .2s cubic-bezier(0.25, 0.46, 0.45, 0.94), background .3s ease, color .3s ease, opacity .3s ease, filter .2s ease, box-shadow .3s ease;
+      width:100%; height:84px; border-radius:10px; border:1px solid rgba(243,244,246,0.2); cursor:pointer;
+      font-weight:600; font-size:clamp(18px,3.8vw,24px);
+      transition:all .2s ease;
       position:relative; overflow:hidden; touch-action:manipulation;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      background:transparent; color:#e5e7eb;
     }
     .btn:hover:not(.btn-disabled){
       transform:translateY(-2px);
-      box-shadow:0 8px 25px rgba(0,0,0,.15);
+      box-shadow:0 4px 16px rgba(0,0,0,.2);
+      background:rgba(255,255,255,0.03);
     }
-    .btn:active{ transform:scale(.99); }
-    .btn-gold{ background:linear-gradient(180deg,var(--gold1),var(--gold2)); color:#1b1400; }
-    .btn-dark{ background:#121316; color:var(--gold1); border:1px solid rgba(255,215,130,.35); }
+    .btn:active{ transform:scale(.98); }
+    .btn-gold{ background:#d4af37; color:#1a1d1f; border:none; box-shadow:0 2px 8px rgba(212,175,55,0.3); }
+    .btn-gold:hover:not(.btn-disabled){ box-shadow:0 4px 20px rgba(212,175,55,0.5); background:#d4af37; }
+    .btn-dark{ background:#2a2d2f; color:#f3f4f6; border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+    .btn-dark:hover:not(.btn-disabled){ box-shadow:0 4px 12px rgba(0,0,0,0.2); }
     .btn-disabled{ background:#2a2a2a !important; color:#bbb !important; cursor:not-allowed !important; opacity:.9; }
 
     /* Smooth slide-in animations for seamless transitions */
@@ -295,20 +300,16 @@
     }
     .nkey{
       height:84px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.14);
-      background:linear-gradient(180deg,#15161a,#0f1012);
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#2a2d2f;
       color:#f3f4f6;
-      font-weight:900;
+      font-weight:600;
       font-size:clamp(22px,4.8vw,30px);
       cursor:pointer;
       display:flex; align-items:center; justify-content:center;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.06),
-        0 6px 14px rgba(0,0,0,.35);
-      transition:transform .2s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
-                 background .3s ease, border-color .3s ease, box-shadow .3s ease,
-                 opacity .3s ease;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      transition:all .2s ease;
       position:relative; overflow:hidden; touch-action:manipulation;
       opacity:0; transform:translateY(15px) scale(0.9);
     }
@@ -316,10 +317,9 @@
       opacity:1 !important; transform:translateY(0) scale(1) !important;
     }
     .nkey:hover{
-      transform:translateY(-2px) scale(1.05);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.08),
-        0 8px 20px rgba(0,0,0,.4);
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      background:#35383a;
     }
     .nkey:active{ transform:scale(.98); }
     .nkey.muted{ opacity:.9; }
@@ -352,9 +352,9 @@
   <script>
   /* =============================== [SECTION: SETTINGS] (you change these) =============================== */
   /* Version will be loaded dynamically from version.json (fallbacks below) */
-  let VERSION = "v2.4.0"; // fallback until fetch resolves
-  let BUILD_DATE = "2025-10-04"; // ISO fallback
-  let BUILD_INFO = "Email-first Stripe lookup + dynamic API base + live publishable key + saved card surfacing";
+  let VERSION = "v2.6.0"; // fallback until fetch resolves
+  let BUILD_DATE = "2025-10-06"; // ISO fallback
+  let BUILD_INFO = "Membership tiers + UI redesign";
   fetch('version.json',{cache:'no-store'})
     .then(r=>r.ok?r.json():null)
     .then(meta=>{ if(!meta) return; VERSION='v'+meta.version; BUILD_DATE=(meta.buildDate||'').replace('T',' ').replace('Z',''); BUILD_INFO=meta.notes||BUILD_INFO; const vEl=document.getElementById('adminVersion'); if(vEl) vEl.textContent=VERSION; })
@@ -824,7 +824,7 @@
               <div class="admin-section">
                 <h4 style="margin:4px 0 6px;color:#eee;text-align:center">System Info</h4>
                 <div style="font-size:12px;color:#c9cacc;line-height:1.4;text-align:center;">
-                  <div><strong>Version:</strong> <span id="versionDisplay">v1.0.0</span></div>
+                  <div><strong>Version:</strong> <span id="versionDisplay">v2.6.0</span></div>
                   <div><strong>Environment:</strong> <span id="environmentDisplay">Loading...</span></div>
                   <div><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">Jan 2025</span></div>
                 </div>
