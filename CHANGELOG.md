@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
+## [2.7.0] - 2025-10-06
+### Added
+- Test deployment
+
 ## [2.6.0] - 2025-10-06
 ### Added
 - Membership tier selection system with Gold ($600/16 weeks) and Silver ($196/4 weeks) options
