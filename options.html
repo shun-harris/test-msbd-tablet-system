@@ -1095,6 +1095,7 @@
             gate.style.display='none';
             if(savedSection) savedSection.style.opacity='1';
             if(savedCardsList) savedCardsList.style.visibility='visible';
+            loadSavedCards(); // Load cards if session is already active
             return;
           }
             gate.style.display='block';
@@ -1659,9 +1660,11 @@
           const savedCardsList = document.getElementById('saved-cards');
           if(savedSection) savedSection.style.opacity='1';
           if(savedCardsList){ savedCardsList.style.visibility='hidden'; savedCardsList.innerHTML=''; }
-          renderPinGate().then(async ()=>{
-            const st = await pinStatus();
-            if(st.sessionActive) loadSavedCards();
+          // renderPinGate() handles PIN gate display AND loads cards if session is active
+          // Don't call pinStatus() again here - it was already called inside renderPinGate()
+          renderPinGate().then(() => {
+            // Cards are loaded by renderPinGate() if session is active
+            // No need to check status again
           });
         };
 

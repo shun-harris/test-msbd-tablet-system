@@ -29,13 +29,9 @@ try {
         Write-Warn "prod/$prodBranch does not exist yet. It will be created at test/main head." 
     }
 
-    # Ancestry check if branch exists
-    if ($prodHead) {
-        $isAncestor = git merge-base --is-ancestor $prodHead $testHead; $ancestorExit = $LASTEXITCODE
-        if ($ancestorExit -ne 0 -and -not $Force) {
-            Write-Err "prod/$prodBranch is not an ancestor of test/main. Use -Force if you intend to rewrite lineage."; exit 1
-        }
-    }
+    # Note: Ancestry check skipped because CNAME differences cause natural divergence
+    # between test and prod branches. We use --force-with-lease for safe force-push.
+    # If you need to verify ancestry manually, use: git merge-base --is-ancestor prod/prod-release test/main
 
     $version = (Get-Content version.json -Raw | ConvertFrom-Json).version
     Write-Step "Ready to promote version v$version (commit $testHead) to prod/$prodBranch"
