@@ -258,6 +258,97 @@ Human-in-the-loop semantic version management without enforced commit classifica
 - `bump-version.ps1`, `deploy.ps1`, `CHANGELOG.md`, `version.json`.
 
 ---
+## 8. Payment Overlay Auto-Closing After PIN Success (Dev Server Live-Reload)
+**Date observed:** 2025-10-05  
+**Resolved:** 2025-10-05  
+
+### Symptom
+Payment overlay (with saved cards) closed immediately after successful PIN entry, despite all DOM inspection showing `display: flex`, `computed style: flex`, and visible positioning. Issue only occurred in localhost development environment.
+
+### Impact
+Complete inability to access saved payment methods during local development; debugging cycle extended over multiple hours; required extensive instrumentation to identify root cause.
+
+### Root Cause (Single Statement)
+Live Server (VS Code extension) WebSocket connection triggered `beforeunload` event milliseconds after PIN unlock, causing page to attempt reload which closed the overlay before user could interact with saved cards.
+
+### Contributing Factors
+- Dev server live-reload behavior conflicting with overlay state management
+- `beforeunload` event not initially suspected (focus was on CSS/DOM manipulation)
+- Overlay close guards only checked for explicit user actions, not navigation events
+- Issue was environment-specific (production/test deployments unaffected)
+
+### Debugging Journey
+Multi-phase escalating instrumentation revealed the issue:
+1. Added close intent guards with reason-based authorization → no effect
+2. Added event propagation stoppers on forms → no effect  
+3. Added "nuclear watchdog" forcing `display: flex` every 50ms → still closed (but logs showed computed=flex)
+4. Added on-screen debug console for video capture → revealed page was closing, not just overlay
+5. Stack trace analysis → discovered `beforeunload` firing from `socket.onmessage` (dev server port 5500)
+
+### Fixes Implemented
+- Added 5-second `beforeunload` event blocker after PIN unlock timestamp (`window.__pinJustUnlocked`)
+- Browser now shows "Reload site?" dialog when dev server tries to reload
+- User clicks "Cancel" and overlay stays open
+- Production environments unaffected (no dev server WebSocket)
+
+### Validation
+1. PIN unlock in localhost → overlay stays open, dev server shows confirmation dialog
+2. User can interact with saved cards list without disruption
+3. Production/test environments continue normal operation (no beforeunload blocker needed)
+4. Removed ~150 lines of heavy watchdog/enforcement code after identifying real cause
+
+### Preventative Actions
+- Document dev server quirks in local development setup guide
+- Consider adding environment detection to disable live-reload in specific views
+- Keep `beforeunload` blocker as lightweight safety net (5-second window only)
+- Test critical flows in production-like environment (Railway test deployment) to catch environment-specific issues
+
+### Related Files
+- `options.html` (lines ~1100-1110): `beforeunload` event listener with 5-second guard
+- `options.html` (lines ~1046, ~1096): `window.__pinJustUnlocked` timestamp markers
+
+### Related Commits / Files
+- Comment in code: "Block navigation for 5 seconds after PIN unlock (prevents dev server reload from closing overlay)"
+
+---
+## 9. Phone Number Format Mismatch Causing Customer Lookup Failures
+**Date observed:** 2025-10-05  
+**Resolved:** 2025-10-05  
+
+### Symptom
+Existing customer with saved payment methods showed zero cards when accessing saved cards list. Server logs indicated customer not found despite card existing in Stripe.
+
+### Impact
+Returning customers unable to access their saved payment methods, forcing manual card re-entry and creating duplicate customer records.
+
+### Root Cause (Single Statement)
+Payment method endpoints (`/get-payment-methods`, `/delete-payment-method`, `/add-payment-method`) did not normalize phone numbers before Stripe customer search, while customer creation and PIN auth endpoints did normalize (strip formatting, take last 10 digits), causing lookup mismatches.
+
+### Contributing Factors
+- Inconsistent phone normalization across endpoint families
+- No validation that all Stripe customer operations use same phone format
+- Original customers created with normalized phone but queried with raw format
+- Testing primarily with simple numeric input (no dashes/parentheses) masked the issue
+
+### Fixes Implemented
+- Added `normalizePhone()` calls to all three payment method endpoints
+- Standardized phone handling across entire backend codebase
+- Phone now consistently normalized before any Stripe customer search or creation
+
+### Validation
+1. Customer phone `6019551203` previously returning 0 cards now correctly finds existing customer and payment methods
+2. Verified normalization removes formatting characters (dashes, spaces, parentheses) and takes last 10 digits
+3. Confirmed consistent behavior across all payment-related endpoints
+
+### Preventative Actions
+- Establish phone normalization as mandatory step in code review for any endpoint touching Stripe customers
+- Consider adding server-side logging of normalized vs raw phone for debugging
+- Document phone format requirements in API endpoint comments
+
+### Related Files
+- `server.js` (lines ~410, ~507, ~582): Added `normalizePhone()` to `/get-payment-methods`, `/delete-payment-method`, `/add-payment-method`
+
+---
 ## General Template (For Future Incidents)
 Copy & fill:
 ```
@@ -291,4 +382,53 @@ Related Commits / Files:
 ```
 
 ---
-_Last updated: 2025-10-05_
+## 10. UI/Button Design Inconsistency Across Application
+**Date observed:** 2025-10-06  
+**Resolved:** 2025-10-06  
+
+### Symptom
+Button styles varied significantly across different modals and pages - payment modal buttons had modern flat design, while main page buttons used heavy gradients and different shadow styles. Inconsistent visual hierarchy made it unclear which actions were primary vs secondary.
+
+### Impact
+Reduced visual polish and professional appearance; inconsistent user experience across different flows; harder to establish clear action hierarchy.
+
+### Root Cause (Single Statement)
+Button styles evolved organically over time with different design approaches for new features (modern flat modal buttons) vs legacy code (gradient-heavy primary buttons), without consolidation or design system documentation.
+
+### Contributing Factors
+- New payment/membership modals designed with modern flat aesthetic
+- Original buttons designed with gradient backgrounds and complex shadows
+- No centralized design system or style guide
+- Font weights too heavy (800-900) for modern flat design
+- Different border-radius values across components
+
+### Fixes Implemented
+- Unified all button styles with modern flat design system:
+  - Primary gold buttons: Flat `#d4af37` with subtle shadow (no gradient)
+  - Secondary gray buttons: Transparent with light `#e5e7eb` text and outline
+  - Tertiary "Done" buttons: Dark `#1a1d1f` background with muted text
+- Standardized border-radius to 10px across all interactive elements
+- Reduced font-weight from 800/900 to 600 for cleaner appearance
+- Unified transition timing to 0.2s for all hover/active states
+- Applied consistent hover effects: 2px lift with enhanced shadow
+- Numberpad keys updated to match flat design system
+
+### Validation
+1. All buttons across index.html and options.html now share consistent visual language
+2. Clear visual hierarchy established: gold (primary) > gray outline (secondary) > dark (tertiary)
+3. Hover and active states behave consistently across all buttons
+4. Payment modal, membership modal, and main page buttons all match
+
+### Preventative Actions
+- Maintain centralized button class definitions in CSS
+- Document design system guidelines in README
+- Use existing button classes for new features rather than creating inline styles
+- Regular design audits to catch inconsistencies early
+
+### Related Files
+- `index.html` (lines ~33-50): Button base styles and variants
+- `options.html` (lines ~40-50): Button base styles and variants
+- Applied to: Primary action buttons, numberpad keys, modal buttons, PIN unlock buttons
+
+---
+_Last updated: 2025-10-06_

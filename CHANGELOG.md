@@ -2,6 +2,63 @@
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
+## [2.6.0] - 2025-10-06
+### Added
+- Membership tier selection system with Gold ($600/16 weeks) and Silver ($196/4 weeks) options
+- Membership selection modal with visual tier comparison and pricing breakdown
+- Weekly billing acknowledgment checkboxes with playful but clear verbiage
+- Modern button styling system across entire application (flat design, consistent shadows)
+
+### Changed
+- **Major UI Overhaul**: Redesigned all buttons with modern flat design
+  - Removed gradients in favor of solid colors and subtle shadows
+  - Updated gold buttons: flat `#d4af37` with shadow instead of gradient
+  - Updated gray buttons: transparent with light outline and `#e5e7eb` text
+  - Special "Done" button style: darker `#1a1d1f` background with muted text
+  - Numberpad keys: flat `#2a2d2f` with clean shadows
+- Membership pricing structure updated:
+  - Gold: $600 for 16 weeks (4 months), then $49/week
+  - Silver: $196 for 4 weeks, then $42/week
+- Unified border-radius to 10px across all buttons for consistency
+- Enhanced button interactions: lift on hover, scale on press
+- Font-weight reduced from 800/900 to 600 for cleaner modern look
+
+### Technical / Internal
+- Consolidated button CSS with consistent transition timing (0.2s)
+- Implemented `.btn-done` class for distinctive tertiary action buttons
+- Added membership tier tracking in payment context (`ctx.membershipTier`)
+- Created `showMembershipSelectionModal()` function for tier selection flow
+
+## [2.5.0] - 2025-10-05
+### Added
+- Payment method management system with delete and add card functionality
+- `/delete-payment-method` endpoint with PIN session requirement and minimum card validation
+- `/add-payment-method` endpoint with $20 test transaction verification (immediately refunded)
+- "Add Card" button in saved cards UI with modal interface
+- Card deletion with minimum one-card-on-file enforcement
+- Shake animation and error message when attempting to delete last card
+- Loading skeleton/spinner while fetching saved cards
+- Auto-focus on first "Use" button after cards load
+- Staggered card entrance animations with highlight pulse effect
+- Phone number normalization across all payment method endpoints
+- Success/error toast notifications for card operations
+
+### Changed
+- Normalized phone number format in `/get-payment-methods`, `/delete-payment-method`, and `/add-payment-method` endpoints
+- Enhanced saved cards UI with action buttons and improved visual feedback
+- Improved card verification flow with immediate refund of test charges
+
+### Fixed
+- Customer lookup failures due to phone number format mismatch
+- Missing phone normalization causing duplicate customer creation
+- Stripe public key reference error in add card modal (`STRIPE_PK` → `STRIPE_PUBLISHABLE_KEY`)
+
+### Technical / Internal
+- Implemented card count validation before deletion (prevents removing last card)
+- Added $20 authorization + immediate refund flow for card verification
+- Enhanced error handling with user-friendly messages for card declined/insufficient funds
+- Added comprehensive loading states and animations throughout card management flow
+
 ## [2.4.7] - 2025-10-04
 ### Added
 - Enforced main test
