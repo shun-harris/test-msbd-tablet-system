@@ -1116,8 +1116,8 @@
                   <input id="pinNew2" type="password" pattern="\\d{4,6}" inputmode="numeric" autocomplete="new-password" placeholder="Confirm PIN" required style="padding:10px;border:1px solid var(--border);border-radius:8px;background:#0c0d0f;color:#fff;font-size:16px;">
                   <button style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;height:54px;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Save PIN & Unlock</button>
                   <div id="pinCreateMsg" style="color:#ff9aa1;font-size:12px;display:none"></div>
-                  <button type="button" id="pinDiagBtn" style="margin-top:4px;padding:6px 10px;border:1px solid var(--border);background:#1d1f23;color:#cdd0d4;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600">Show Diagnostics</button>
-                  <pre id="pinDiagOut" style="display:none;margin:4px 0 0;font-size:10px;line-height:1.35;background:#0c0d0f;border:1px solid var(--border);padding:6px 8px;border-radius:6px;white-space:pre-wrap;max-height:140px;overflow:auto"></pre>
+                  ${SHOW_DEBUG ? `<button type="button" id="pinDiagBtn" style="margin-top:4px;padding:6px 10px;border:1px solid var(--border);background:#1d1f23;color:#cdd0d4;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600">Show Diagnostics</button>
+                  <pre id="pinDiagOut" style="display:none;margin:4px 0 0;font-size:10px;line-height:1.35;background:#0c0d0f;border:1px solid var(--border);padding:6px 8px;border-radius:6px;white-space:pre-wrap;max-height:140px;overflow:auto"></pre>` : ''}
                 </form>`;
                 const f = gate.querySelector('#pinCreateForm');
                 const diagBtn = gate.querySelector('#pinDiagBtn');
@@ -1243,15 +1243,27 @@
                   console.log('[PIN][VERIFY] PIN verified successfully, loading saved cards');
                   
                   // Block navigation for 5 seconds after PIN unlock (prevents dev server reload from closing overlay)
-                  window.addEventListener('beforeunload', (e)=>{
-                    const elapsed = Date.now() - window.__pinJustUnlocked;
-                    if(elapsed < 5000){
-                      console.warn('[PIN] Blocked navigation ('+Math.round(elapsed)+'ms after unlock)');
-                      e.preventDefault();
-                      e.returnValue = '';
-                      return '';
-                    }
-                  }, {capture: true});
+                  // ONLY in DEV mode - production doesn't have hot-reload issues
+                  if(DEV){
+                    const unloadHandler = (e)=>{
+                      const elapsed = Date.now() - window.__pinJustUnlocked;
+                      if(elapsed < 5000){
+                        // Don't block if Add Card modal is open (allows Stripe Elements interaction)
+                        const addCardModal = document.getElementById('add-card-modal');
+                        if(addCardModal){
+                          console.log('[PIN] Allowing interaction - Add Card modal is open');
+                          return;
+                        }
+                        console.warn('[PIN] Blocked navigation ('+Math.round(elapsed)+'ms after unlock) - DEV mode only');
+                        e.preventDefault();
+                        e.returnValue = '';
+                        return '';
+                      } else {
+                        window.removeEventListener('beforeunload', unloadHandler, {capture: true});
+                      }
+                    };
+                    window.addEventListener('beforeunload', unloadHandler, {capture: true});
+                  }
                   
                   // Update gate message and load cards, then fade out
                   setTimeout(()=>{
