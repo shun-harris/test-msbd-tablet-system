@@ -708,7 +708,7 @@
         }
 
         // ===== ON-SCREEN DEBUG CONSOLE (Local only, or ?debug=1) =====
-        const SHOW_DEBUG = (DEV && location.hostname === 'localhost') || qs.get('debug')==='1';
+        const SHOW_DEBUG = (DEV && location.hostname === 'localhost') || qs.get('debug')==='1' || localStorage.getItem('debug')==='1';
         if(SHOW_DEBUG){
           const debugConsole = document.createElement('div');
           debugConsole.id = 'onScreenDebug';
@@ -2118,6 +2118,9 @@
             <div><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">Jan 2025</span></div>
             <div><strong>Page:</strong> Payment Options</div>
           </div>
+          <div style="margin-top:12px;text-align:center">
+            <button id="debugToggle" style="padding:8px 16px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600">Debug: <span id="debugStatus">OFF</span></button>
+          </div>
         </div>
       </div>
     </div>
@@ -2172,6 +2175,26 @@
         else env = "Production (tablet.msbdance.com)";
         
         $admin("environmentDisplay").textContent = env;
+        
+        // Setup debug toggle
+        const debugToggle = $admin("debugToggle");
+        const debugStatus = $admin("debugStatus");
+        if(debugToggle){
+          const updateDebugUI = ()=>{
+            const isDebugOn = localStorage.getItem('debug') === '1';
+            debugStatus.textContent = isDebugOn ? 'ON' : 'OFF';
+            debugToggle.style.background = isDebugOn ? '#1b2a19' : '#1d1f23';
+            debugToggle.style.borderColor = isDebugOn ? '#2a5a36' : 'rgba(255,255,255,.2)';
+            debugStatus.style.color = isDebugOn ? '#b9f6ce' : '#cdd0d4';
+          };
+          updateDebugUI();
+          debugToggle.onclick = ()=>{
+            const currentState = localStorage.getItem('debug') === '1';
+            localStorage.setItem('debug', currentState ? '0' : '1');
+            updateDebugUI();
+            alert('Debug mode ' + (currentState ? 'disabled' : 'enabled') + '. Reload the page to apply changes.');
+          };
+        }
       }
 
       // Allow Enter key to unlock

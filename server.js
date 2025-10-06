@@ -70,6 +70,13 @@ const VERIFY_WINDOW_MS = 5 * 60 * 1000; // 5 min rolling window
 const VERIFY_MAX_WINDOW_ATTEMPTS = 15; // verify calls in window
 const PIN_ADMIN_KEY = process.env.PIN_ADMIN_KEY || 'PLEASE_SET_ADMIN_KEY';
 
+console.log(`🔐 PIN Database: ${PIN_DB_FILE}`);
+if (PIN_DB_FILE.startsWith('/data/')) {
+    console.log('✅ Using persistent volume for PIN storage (survives deployments)');
+} else {
+    console.warn('⚠️  Using local filesystem for PIN storage (will be lost on deployment!)');
+}
+
 const db = new sqlite3.Database(PIN_DB_FILE);
 db.serialize(()=>{
     db.run(`CREATE TABLE IF NOT EXISTS pin_credentials (
