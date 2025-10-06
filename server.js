@@ -583,10 +583,10 @@ app.post("/delete-payment-method", async (req, res) => {
 // Add payment method with $20 test transaction (PIN session required)
 app.post("/add-payment-method", async (req, res) => {
     console.log("➕ Add payment method with test transaction:", req.body);
+    const { stripe, environment, detection } = getStripeForRequest(req); // Move stripe out of try block for catch access
     try {
-        const { stripe, environment, detection } = getStripeForRequest(req);
         const phone = normalizePhone(req.body.phone);
-        const { email, payment_method_id } = req.body;
+        const { email, payment_method_id, name } = req.body; // Add name to destructuring
         
         // Verify PIN session
         const auth = (req.get('authorization')||'').trim();
@@ -634,13 +634,14 @@ app.post("/add-payment-method", async (req, res) => {
         if (!customer) {
             customer = await stripe.customers.create({
                 phone: phone,
+                name: name || 'Dance Student',
                 email: email || `${phone}@tablet.msbdance.com`,
                 metadata: { 
                     source: 'tablet_system', 
                     phone: phone 
                 }
             });
-            console.log(`👤 Created new customer: ${customer.id}`);
+            console.log(`👤 Created new customer: ${customer.id} (phone: ${phone}, name: ${name || 'Dance Student'}, email: ${email || 'fallback'})`);
         }
         
         // Attach payment method to customer first
