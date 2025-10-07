@@ -402,9 +402,26 @@ app.post("/create-payment-intent", async (req, res) => {
             console.log(`🎯 Using saved payment method (authorized): ${payment_method_id}`);
         } else if (req.body.new_payment_method) {
             // Handle NEW payment method (no PIN required)
-            paymentIntentData.payment_method = req.body.new_payment_method;
+            const pmId = req.body.new_payment_method;
+            
+            // Attach the payment method to the customer first
+            if (customer) {
+                try {
+                    await stripe.paymentMethods.attach(pmId, { customer: customer.id });
+                    console.log(`💳 Attached new payment method ${pmId} to customer ${customer.id}`);
+                } catch (attachError) {
+                    // If already attached (shouldn't happen but handle gracefully)
+                    if (attachError.code !== 'resource_already_exists') {
+                        console.error('Failed to attach payment method:', attachError);
+                        throw attachError;
+                    }
+                    console.log(`💳 Payment method ${pmId} already attached to customer`);
+                }
+            }
+            
+            paymentIntentData.payment_method = pmId;
             paymentIntentData.setup_future_usage = 'on_session'; // Save for future
-            console.log(`💳 Using new payment method (no PIN required): ${req.body.new_payment_method}`);
+            console.log(`💳 Using new payment method (no PIN required): ${pmId}`);
         } else {
             // For new cards without pre-saved method, save them automatically after payment
             paymentIntentData.setup_future_usage = 'on_session';
