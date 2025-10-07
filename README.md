@@ -51,7 +51,7 @@ The system consists of two HTML pages with distinct user flows:
 
 ```powershell
 # Deploys from main branch to test.tablet.msbdance.com
-.\deploy.ps1 test
+.\scripts\deploy.ps1 test
 ```
 
 **Process**:
@@ -63,7 +63,7 @@ The system consists of two HTML pages with distinct user flows:
 
 ```powershell
 # Fast-forwards prod-release branch and deploys to tablet.msbdance.com
-.\promote-to-prod.ps1
+.\scripts\promote-to-prod.ps1
 ```
 
 **Safety**: Fast-forward only (no new commits), ensures prod gets exactly what was tested on TEST.
@@ -117,9 +117,9 @@ prod-release    → PROD environment (promote only)
 
 **Workflow**:
 1. Make changes on `main` branch
-2. Deploy to TEST with `.\deploy.ps1 test`
+2. Deploy to TEST with `.\scripts\deploy.ps1 test`
 3. Verify on test.tablet.msbdance.com
-4. Promote to PROD with `.\promote-to-prod.ps1`
+4. Promote to PROD with `.\scripts\promote-to-prod.ps1`
 
 ### Commit Convention
 
@@ -177,19 +177,29 @@ localStorage.setItem('stripeDebug', '1');     // Enable debug overlay
 
 ```
 .
+├── docs/                       # Documentation
+│   ├── ARCHITECTURE.md         # Technical deep-dives
+│   ├── ROOT_CAUSE.md           # Incident reports
+│   ├── PRODUCTION_DEPLOY.md    # Deployment procedures
+│   └── FUTURE_IDEAS.md         # Feature backlog
+│
+├── scripts/                    # Deployment automation
+│   ├── deploy.ps1              # TEST deployment script
+│   ├── deploy.bat              # TEST deployment (batch)
+│   ├── promote-to-prod.ps1     # PROD promotion script
+│   └── bump-version.ps1        # Semantic version management
+│
+├── backups/                    # Manual backups (gitignored)
+│
 ├── index.html                  # Member check-in page
 ├── options.html                # Drop-in payment page
 ├── server.js                   # Express backend with Stripe integration
+├── package.json                # Node.js dependencies
 ├── version.json                # Current version number
 ├── CHANGELOG.md                # Version history
-├── deploy.ps1                  # TEST deployment script
-├── promote-to-prod.ps1         # PROD promotion script
-├── bump-version.ps1            # Semantic version management
-└── docs/
-    ├── ARCHITECTURE.md         # Technical documentation
-    ├── ROOT_CAUSE.md           # Incident reports
-    ├── PRODUCTION_DEPLOY.md    # Deployment procedures
-    └── FUTURE_IDEAS.md         # Feature backlog
+├── README.md                   # This file
+├── .env.example                # Environment variables template
+└── .gitignore                  # Git ignore rules
 ```
 
 ---
@@ -199,7 +209,7 @@ localStorage.setItem('stripeDebug', '1');     // Enable debug overlay
 - **Frontend**: Pure HTML/JavaScript (no frameworks)
 - **Backend**: Node.js + Express
 - **Payments**: Stripe Elements + Stripe API
-- **Database**: SQLite (PIN storage)
+- **Database**: Railway managed database (prod/test), SQLite (local dev only)
 - **Hosting**: Railway (separate test/prod services)
 - **Version Control**: Git + GitHub
 - **Deployment**: PowerShell automation scripts

@@ -14,6 +14,12 @@ All notable changes to this project are documented here. This file supersedes th
   - Subtle "Not me?" link integrated within profile card (bottom-right, muted styling)
 
 ### Changed
+- **Loading Animation**: Replaced pulsing circle with bouncing ball animation
+  - White dashed lines animate horizontally as track (`linear-gradient` with `repeat-x`)
+  - Gold ball (flat gradient: `#d4af37` to `#f3dc8a`) bounces with realistic physics
+  - Track animation: 0.75s linear loop, background position shifts -125%
+  - Ball animation: 0.75s cubic-bezier bounce (0, 900, 1, 900) with 0-0.1% vertical movement
+  - More dynamic and engaging than previous static pulse effect
 - **Check-in Upsell Flow**: Improved user experience after free class check-in
   - Upsell "Yes, Buy Next Class" now properly opens payment method choice (Card/Cash modal)
   - Fixed flow that previously just closed modal without allowing purchase

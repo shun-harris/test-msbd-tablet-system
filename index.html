@@ -160,23 +160,33 @@
     }
     
     .loading-pulse {
-      width: 60px;
       height: 60px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--gold1), var(--gold2));
-      animation: loadingPulse 1.5s ease-in-out infinite;
-      box-shadow: 0 0 30px rgba(243, 220, 138, 0.3);
+      aspect-ratio: 2;
+      border-bottom: 3px solid #0000;
+      background: 
+        linear-gradient(90deg, #ffffff 50%, #0000 0)
+        -25% 100%/50% 3px repeat-x border-box;
+      position: relative;
+      animation: bounceTrack 0.75s linear infinite;
     }
     
-    @keyframes loadingPulse {
-      0%, 100% {
-        transform: scale(1);
-        opacity: 0.8;
-      }
-      50% {
-        transform: scale(1.1);
-        opacity: 1;
-      }
+    .loading-pulse:before {
+      content: "";
+      position: absolute;
+      inset: auto 42.5% 0;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: linear-gradient(90deg, #d4af37, #f3dc8a);
+      animation: bounceBall 0.75s cubic-bezier(0, 900, 1, 900) infinite;
+    }
+    
+    @keyframes bounceTrack {
+      to { background-position: -125% 100%; }
+    }
+    
+    @keyframes bounceBall {
+      0%, 2% { bottom: 0%; }
+      98%, to { bottom: 0.1%; }
     }
 
     .input{

@@ -1,0 +1,49 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Environment variables (contains secrets)
+.env
+
+# Database files (local development only - Railway uses managed database)
+# Contains sensitive PIN data, each developer should generate their own
+pin_store.sqlite
+*.db
+*.sqlite
+
+# Backup files (manually created backups)
+*.backup
+*.backup-*
+*_backup.*
+backups/
+
+# Temporary files
+*.tmp.driveupload
+*.tmp
+
+# Test files (experimental code, not for production)
+animation-test.html
+smoke-test.html
+test-*.html
+*-test.html
+
+# Old version files (keeping only current versions)
+*_v2-*
+*_V2.*
+index_2.1-live.html
+options_v_2.1-live.html
+README V2.1.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files (optional - uncomment if you want personal settings)
+# .vscode/
+# settings.json
+
+# Legacy documentation (now consolidated in docs/)
+PATCH_NOTES.md

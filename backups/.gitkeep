@@ -1,0 +1,5 @@
+# Backups Directory
+
+This folder contains manual backup files created during development.
+
+Files in this directory are gitignored - they exist only on your local machine for safety during major refactors or risky operations.

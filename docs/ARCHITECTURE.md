@@ -507,21 +507,21 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 
 ### Scripts
 
-#### `deploy.ps1 test`
+#### `scripts/deploy.ps1 test`
 
 **Purpose**: Deploy to TEST environment
 
 **Process**:
 1. Enforces running from `main` branch (auto-switches if clean)
 2. Aborts if working tree is dirty (uncommitted changes)
-3. Bumps version using `bump-version.ps1` (auto-detects: feat→minor, BREAKING→major, else patch)
+3. Bumps version using `scripts/bump-version.ps1` (auto-detects: feat→minor, BREAKING→major, else patch)
 4. Updates CNAME to `test.tablet.msbdance.com`
 5. Commits with version tag
 6. Pushes to `test` remote (triggers Railway deploy)
 
 **Branch Protection**: Will not deploy from `prod-release` or feature branches
 
-#### `promote-to-prod.ps1`
+#### `scripts/promote-to-prod.ps1`
 
 **Purpose**: Promote tested code to PRODUCTION
 
@@ -534,7 +534,7 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 
 **Safety**: Fast-forward only (no mutations), ensures prod gets exactly what was tested
 
-#### `bump-version.ps1`
+#### `scripts/bump-version.ps1`
 
 **Purpose**: Semantic version management
 
@@ -569,7 +569,7 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 
 ### Branch Enforcement
 
-- **Test deploys**: Must run from `main` branch (enforced by `deploy.ps1`)
+- **Test deploys**: Must run from `main` branch (enforced by `scripts/deploy.ps1`)
 - **Prod deploys**: Only via promotion script (direct deploy requires `-ForceLegacyProd` flag)
 - **Working tree**: Must be clean (no uncommitted changes) before deploy
 

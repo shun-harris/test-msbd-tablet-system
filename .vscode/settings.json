@@ -1,0 +1,32 @@
+{
+    "CodeGPT.apiKey": "OpenAI",
+    "liveServer.settings.port": 5500,
+    "actionButtons": {
+        "defaultColor": "#ff0034",
+        "loadNpmCommands": false,
+        "reloadButton": null,
+        "commands": [
+            {
+                "cwd": "${workspaceFolder}",
+                "name": "🧪 Test",
+                "color": "cyan",
+                "command": "start smoke-test.html",
+                "tooltip": "Run Smoke Tests"
+            },
+            {
+                "cwd": "${workspaceFolder}",
+                "name": "🚀 Deploy Test",
+                "color": "green",
+                "command": "git push test main",
+                "tooltip": "Push to Test Environment"
+            },
+            {
+                "cwd": "${workspaceFolder}",
+                "name": "🌟 Deploy Prod", 
+                "color": "orange",
+                "command": "git push prod main",
+                "tooltip": "Push to Production Environment"
+            }
+        ]
+    }
+}

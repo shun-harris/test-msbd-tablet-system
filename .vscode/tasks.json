@@ -1,0 +1,79 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Deploy to Test",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "deploy.ps1", "test"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: Start (Env Keys)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "if (-not (Test-Path node_modules)) { Write-Host '📦 Installing dependencies...'; npm install }; node server.js"
+      ],
+      "group": "none",
+      "presentation": {"echo": true, "reveal": "always", "panel": "shared"},
+      "problemMatcher": [],
+      "detail": "Start server (auto installs dependencies if missing)"
+    },
+    {
+      "label": "Server: Start + Open Browser",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "if (-not (Test-Path node_modules)) { Write-Host '📦 Installing dependencies...'; npm install }; Start-Process http://localhost:3000/options; node server.js"
+      ],
+      "group": "none",
+      "presentation": {"echo": true, "reveal": "always", "panel": "shared"},
+      "problemMatcher": [],
+      "detail": "Start server and open options page (auto installs dependencies if missing)"
+    },
+    {
+      "label": "🛑 Legacy Direct Prod Deploy (discouraged)",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "deploy.ps1", "prod"],
+      "group": "none",
+      "presentation": {"echo": true, "reveal": "always", "focus": false, "panel": "new"},
+      "problemMatcher": []
+    },
+    {
+      "label": "⬆ Promote: Tested → Prod",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "promote-to-prod.ps1"],
+      "group": "build",
+      "presentation": {"echo": true, "reveal": "always", "focus": false, "panel": "new"},
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: Clean DB + Start (Env)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "if (Test-Path pin_store.sqlite) { Remove-Item pin_store.sqlite }; if (-not (Test-Path node_modules)) { Write-Host '📦 Installing dependencies...'; npm install }; node server.js"
+      ],
+      "group": "none",
+      "presentation": {"echo": true, "reveal": "always", "panel": "shared"},
+      "problemMatcher": [],
+      "detail": "Remove sqlite store then start (auto installs dependencies if missing)"
+    }
+  ]
+}
