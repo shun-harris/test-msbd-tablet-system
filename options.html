@@ -840,17 +840,32 @@
           
           document.body.appendChild(modal);
           
-          $("#cashOk").onclick = () => {
-            modal.remove();
-            window.location.href = SETTINGS.HOME_URL;
-          };
+          const cashOkBtn = $("#cashOk");
+          const payCardBtn = $("#payCardInstead");
           
-          $("#payCardInstead").onclick = () => {
-            modal.remove();
-            ctx.kind = 'single';
-            classQuantity = 1;
-            showStripeCardForm();
-          };
+          if (cashOkBtn) {
+            cashOkBtn.onclick = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Cash OK clicked, redirecting to:', SETTINGS.HOME_URL);
+              modal.remove();
+              setTimeout(() => {
+                window.location.href = SETTINGS.HOME_URL;
+              }, 100);
+            };
+          }
+          
+          if (payCardBtn) {
+            payCardBtn.onclick = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Pay with card instead clicked');
+              modal.remove();
+              ctx.kind = 'single';
+              classQuantity = 1;
+              showStripeCardForm();
+            };
+          }
         }
         // Overlay close goes back to home (main input page)
         $("#qrDone").onclick=()=>{ location.href = SETTINGS.HOME_URL; };
