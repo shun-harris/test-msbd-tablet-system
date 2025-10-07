@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
+## [2.8.2] - 2025-10-07
+### Fixed
+- **White Flash Between Pages**: Added instant loading screen to options.html
+  - Shows bouncing ball animation on gradient background during page load
+  - Eliminates white screen flash that made site appear broken
+  - Smooth fade-out transition when content is ready
+  - Prevents jarring visual experience on Fully Kiosk tablets
+
 ## [2.8.1] - 2025-10-07
 ### Fixed
 - **Payment Method Attach Error**: Fixed "payment method already attached to customer" error when adding new cards

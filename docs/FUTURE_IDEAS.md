@@ -33,8 +33,14 @@
    - Offline support
    - Conflict resolution
 
-- **Rotating Quotes or Jokes**:
-  - Display a "Quote of the Day" or a joke during check-in to enhance user experience.
+2. **Page Transition Improvements**
+   - Add smooth fade transitions between index.html and options.html to eliminate white flash
+   - Implement instant loading page with dark background to prevent white gaps
+   - Use CSS transitions or preload next page to ensure seamless navigation
+   - Consider single-page app architecture to avoid full page reloads
 
-**facial recognition for seamless check-in.
----combine with facial recognition for seamless check-in.
+3. **Rotating Quotes or Jokes**
+   - Display a "Quote of the Day" or a joke during check-in to enhance user experience
+
+4. **Facial Recognition**
+   - Combine with facial recognition for seamless check-in
