@@ -5,7 +5,7 @@
       "label": "🚀 Deploy to Test",
       "type": "shell",
       "command": "powershell",
-      "args": ["-ExecutionPolicy", "Bypass", "-File", "deploy.ps1", "test"],
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/deploy.ps1", "test"],
       "group": "build",
       "presentation": {
         "echo": true,
@@ -47,7 +47,7 @@
       "label": "🛑 Legacy Direct Prod Deploy (discouraged)",
       "type": "shell",
       "command": "powershell",
-      "args": ["-ExecutionPolicy", "Bypass", "-File", "deploy.ps1", "prod"],
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/deploy.ps1", "prod"],
       "group": "none",
       "presentation": {"echo": true, "reveal": "always", "focus": false, "panel": "new"},
       "problemMatcher": []
@@ -56,7 +56,7 @@
       "label": "⬆ Promote: Tested → Prod",
       "type": "shell",
       "command": "powershell",
-      "args": ["-ExecutionPolicy", "Bypass", "-File", "promote-to-prod.ps1"],
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/promote-to-prod.ps1"],
       "group": "build",
       "presentation": {"echo": true, "reveal": "always", "focus": false, "panel": "new"},
       "problemMatcher": []
