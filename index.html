@@ -180,7 +180,7 @@
     }
 
     .input{
-      width:min(760px,100%); margin:0 auto; padding:18px 20px;
+      width:100%; max-width:420px; margin:0 auto; padding:18px 20px;
       background:#0f1012; color:#fff; border:1px solid rgba(255,255,255,.12);
       border-radius:14px; font-size:clamp(18px,3.8vw,24px); outline:none;
       transition:all .3s ease, transform .2s ease;
@@ -704,7 +704,7 @@
           <div class="brand slide-in-element">${LOGO_URL?`<img src="${LOGO_URL}" alt="logo" onerror="this.style.display='none'">`:""}</div>
           <h1 class="slide-in-element">WELCOME TO<br>MSBD STUDIO</h1>
           <p class="sub slide-in-element">Check in below <span class="gold-icon">↓</span></p>
-          <div style="display:grid; gap:14px; width:min(760px,100%); margin:0 auto;">
+          <div style="display:grid; gap:14px; max-width:420px; width:100%; margin:0 auto;">
             <button id="btnDropin" class="btn btn-gold slide-in-element">🎟 Drop-In Check-In</button>
             <button id="btnMember" class="btn btn-dark slide-in-element">
               <svg class="gold-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26">
@@ -723,7 +723,7 @@
           <input id="inpDrop" class="input" type="tel" placeholder="(555) 123-4567" inputmode="none" readonly>
           <div id="padDrop" class="pad-host" data-for="inpDrop"></div>
 
-          <div style="display:grid; gap:10px; width:min(760px,100%); margin:16px auto 0;">
+          <div style="display:grid; gap:10px; max-width:420px; width:100%; margin:16px auto 0;">
             <button id="btnDropNext" class="btn btn-gold">Next</button>
           </div>
 
@@ -735,7 +735,7 @@
             </div>
           </div>
 
-          <div style="display:grid; gap:10px; width:min(760px,100%); margin:10px auto 0;">
+          <div style="display:grid; gap:10px; max-width:420px; width:100%; margin:10px auto 0;">
             <button id="backDrop" class="btn btn-dark back-button">← Back</button>
           </div>
 
@@ -749,7 +749,7 @@
           <input id="inpPhone" class="input" type="tel" placeholder="(555) 123-4567" inputmode="none" readonly>
           <div id="padPhone" class="pad-host" data-for="inpPhone"></div>
 
-          <div style="display:grid; gap:14px; width:min(760px,100%); margin:16px auto 0%;">
+          <div style="display:grid; gap:14px; max-width:420px; width:100%; margin:16px auto 0;">
             <button id="btnNext" class="btn btn-gold">Next</button>
             <button id="back1" class="btn btn-dark">← Back</button>
           </div>
@@ -770,7 +770,9 @@
             </div>
           </div>
 
-          <div id="classList" class="class-pills"></div>
+          <div class="class-pills-container">
+            <div id="classList" class="class-pills"></div>
+          </div>
 
           <div class="cta-bar">
             <div class="hint-row">
@@ -1619,24 +1621,49 @@
     .hint .count{ color:var(--gold1); font-weight:800; }
     
     /* Make buttons match chip width exactly */
+    .cta-bar{ width:min(900px,100%); margin:0 auto; padding:0 8px; }
     .cta-bar .btn{ 
-      width:min(860px,100%); 
+      width:100%; 
       margin:0 auto 10px; 
       display:block;
     }
-    .btn-cta{ min-height:60px; }
+    .btn-cta{ min-height:56px; }
   </style>
 
   <!-- =============================== [SECTION: STYLES – PREMIUM CLASSES UI] =============================== -->
   <style>
     /* Premium Classes UI – frosted chips with gold ring on select */
-    .greet-row{ display:flex; align-items:center; gap:12px; width:min(860px,100%); margin:0 auto 14px; text-align:left; }
-    .greet-text .greet{ margin:0; font-size:clamp(22px,4.6vw,32px); font-weight:900; }
-    .greet-text .meta-line{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:clamp(12px,2.4vw,14px); }
-    .profile-bubble{ width:48px; height:48px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-weight:900; color:#1b1400; background:linear-gradient(180deg,var(--gold1),var(--gold2)); box-shadow: inset 0 -1px 0 rgba(0,0,0,.35); }
-    .pill-soft{ padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
+    .greet-row{ display:flex; align-items:center; gap:12px; width:min(900px,100%); margin:0 auto 16px; text-align:left; padding:0 8px; }
+    .greet-text .greet{ margin:0; font-size:clamp(20px,4.2vw,28px); font-weight:900; }
+    .greet-text .meta-line{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:clamp(11px,2.2vw,13px); flex-wrap:wrap; }
+    .profile-bubble{ width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-weight:900; color:#1b1400; background:linear-gradient(180deg,var(--gold1),var(--gold2)); box-shadow: inset 0 -1px 0 rgba(0,0,0,.35); flex-shrink:0; }
+    .pill-soft{ padding:3px 9px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); font-size:clamp(10px,2vw,12px); }
 
-    .class-pills{ display:grid; gap:12px; width:min(860px,100%); margin:0 auto 24px; }
+    /* Scrollable container for class list to prevent overflow */
+    .class-pills-container{ 
+      max-height:calc(100vh - 340px); 
+      overflow-y:auto; 
+      padding:0 8px 16px; 
+      margin-bottom:16px;
+      /* Hide scrollbar for user-facing UI */
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+    }
+    /* Hide scrollbar for Chrome/Safari/Opera */
+    .class-pills-container::-webkit-scrollbar{ display:none; }
+
+    /* 2-column grid for tablets to reduce scrolling */
+    .class-pills{ 
+      display:grid; 
+      gap:10px; 
+      width:100%; 
+      margin:0 auto;
+      grid-template-columns:repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    }
+    
+    @media (min-width:700px) and (max-width:1200px){
+      .class-pills{ grid-template-columns:repeat(2, 1fr); }
+    }
 
     /* Base frosted look with animation */
     .chip{ 
@@ -1645,6 +1672,8 @@
       opacity:0; transform:translateY(20px) scale(0.95);
       transition:all .5s cubic-bezier(0.34, 1.56, 0.64, 1), 
                  border-color .3s ease, background .3s ease, box-shadow .3s ease;
+      padding:18px 22px;
+      font-size:clamp(17px, 3.8vw, 26px);
     }
     .chip.animate-in{
       opacity:1; transform:translateY(0) scale(1);

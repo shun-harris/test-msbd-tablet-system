@@ -16,16 +16,25 @@ switch ($Target) {
     "test" {
         # Enforce running from main branch for test deployments
         $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+        Write-Host "Current branch: $currentBranch" -ForegroundColor Cyan
+        
         if ($currentBranch -ne 'main') {
             $status = git status --porcelain 2>$null
             if ($status) {
-                Write-Host "Cannot auto-switch branches: working tree not clean. Commit/stash changes then re-run." -ForegroundColor Red
-                Write-Host "Current branch: $currentBranch (expected: main)" -ForegroundColor Yellow
+                Write-Host "❌ Cannot auto-switch branches: working tree not clean." -ForegroundColor Red
+                Write-Host "Current branch: $currentBranch (need to switch to: main)" -ForegroundColor Yellow
+                Write-Host "Please commit or stash your changes, then re-run." -ForegroundColor Yellow
                 return
             }
-            Write-Host "Auto-switching from $currentBranch to main for test deploy enforcement..." -ForegroundColor Yellow
-            git checkout main | Out-Null
-            Write-Host "Switched to main." -ForegroundColor Green
+            Write-Host "🔄 Auto-switching from '$currentBranch' to 'main' for test deploy..." -ForegroundColor Yellow
+            git checkout main 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "❌ Failed to switch to main branch" -ForegroundColor Red
+                return
+            }
+            Write-Host "✅ Switched to main branch" -ForegroundColor Green
+        } else {
+            Write-Host "✅ Already on main branch" -ForegroundColor Green
         }
         Write-Host "Bumping version ($BumpType) for TEST deployment..." -ForegroundColor Green
         $bumpNotes = if([string]::IsNullOrWhiteSpace($Notes)) { 'Test deployment' } else { $Notes }

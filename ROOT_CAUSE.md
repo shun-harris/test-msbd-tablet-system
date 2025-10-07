@@ -431,4 +431,161 @@ Button styles evolved organically over time with different design approaches for
 - Applied to: Primary action buttons, numberpad keys, modal buttons, PIN unlock buttons
 
 ---
-_Last updated: 2025-10-06_
+## 11. options.html File Corruption & UTF-8 Encoding Crisis
+**Date observed:** 2025-10-07  
+**Resolved:** 2025-10-07  
+
+### Symptom
+During cleanup of perceived duplicate code (lines ~573-742), multi-line string replacements corrupted `options.html`:
+- File displayed black screen in browser (critical JavaScript errors)
+- HTML fragments appeared outside template literal contexts
+- Duplicate `getInitials()` function definitions caused naming conflicts
+- Subsequent attempts to fix via string replacement failed with encoding errors
+- Special characters (emojis, checkmarks, em dashes) showed as garbled multi-byte sequences
+
+### Impact
+Complete application failure - payment modal rendered blank gray box with no functionality; card input field empty; PIN gate missing; all buttons non-responsive. Development blocked for extended debugging session requiring full file replacement from working branch.
+
+### Root Cause (Single Statement)
+Aggressive multi-line string replacements in large file with special characters caused misalignment between search patterns and actual file content, compounded by UTF-8 encoding corruption when attempting recovery via git operations and PowerShell copy commands.
+
+### Contributing Factors
+- Large file size (2500+ lines) made visual inspection of replacement boundaries difficult
+- Search patterns included emoji characters that were encoded differently in corrupted sections
+- Multiple failed replacement attempts created cascading corruption
+- `stripeOverlay` element declared at wrong position (line 625 vs correct line 989) broke initialization order
+- Git operations (`git show`, `Copy-Item`) mangled UTF-8 special characters into Windows-1252 equivalents
+- No file backup created before initiating risky multi-replace operation
+
+### Debugging Journey
+1. **Initial cleanup attempt**: Multi-replace targeting lines 573-742 to remove perceived duplicate code
+2. **Black screen discovered**: Browser console showed JavaScript errors, HTML outside template strings
+3. **First recovery attempt**: String replacements to remove corrupted sections failed due to emoji encoding mismatches
+4. **PowerShell extraction**: Used `Get-Content` with line ranges to extract clean sections (1-613, 720+), bypassing encoding issues
+5. **Removed ~170 lines**: Successfully eliminated corrupted code block
+6. **Payment modal broken**: After cleanup, card input showed empty, PIN gate missing, buttons dead
+7. **Comparison with working version**: Fetched `test/main` branch code, identified `stripeOverlay` initialization order difference
+8. **Full file replacement**: Copied entire working version from `test/main`, restored functionality
+9. **Encoding issues discovered**: User reported "weird characters" throughout UI after replacement
+10. **Systematic encoding fixes**: 20+ replacements to restore proper UTF-8 characters
+
+### Corrupted Characters Inventory
+After git copy operations, following UTF-8 characters were mangled:
+- `—` (em dash, U+2014) → `ΓÇö` (appeared 6 times)
+- `✓` (checkmark, U+2713) → `Γ£ô` (appeared 4 times)  
+- `•` (bullet, U+2022) → `ΓÇó` (appeared 8 times in card masking)
+- `'` (apostrophe, U+2019) → `ΓÇÖ` (appeared 1 time)
+- `😉` (wink, U+1F609) → `≡ƒÿë` (appeared 1 time)
+- `💵` (money, U+1F4B5) → `≡ƒÆ╡` (appeared 1 time)
+- `🔍` (magnifying glass, U+1F50D) → `≡ƒöì` (appeared 1 time)
+- `⚙️` (gear, U+2699) → `ΓÜÖ∩╕Å` (appeared 1 time)
+- `…` (ellipsis, U+2026) → `ΓÇª` (appeared 1 time)
+
+**Total encoding issues:** 24+ corrupted character sequences
+
+### Fixes Implemented
+1. **Emergency recovery**: Full file replacement from working `test/main` branch
+2. **Backup creation**: Created `options.html.backup-before-test-main-copy` before replacement
+3. **Systematic encoding restoration**: Used `multi_replace_string_in_file` to fix all 24+ character corruptions
+4. **Key fixes applied**:
+   - Welcome message: "You're all set — pick an option below."
+   - Button text: "I'm Done" (apostrophe)
+   - Quantity controls: Minus button "−"
+   - Success messages: "Checked in ✓"
+   - Card masking: "VISA •••• 4242"
+   - Payment titles: "Single Class — choose a payment method"
+   - Membership agreement: "I won't complain... 😉"
+   - Cash payment: "💵" money emoji
+   - Debug console: "🔍 Debug Console"
+   - Admin button: "⚙️" settings gear
+   - PIN verification: "PIN verified ✓ Loading saved cards…"
+
+### Validation
+1. Browser no longer shows black screen or JavaScript errors
+2. Payment modal displays correctly with all elements functional
+3. Card input field renders and accepts typing
+4. PIN gate appears with proper checkmark and ellipsis
+5. Saved cards show with proper bullet masking (••••)
+6. Admin settings gear icon displays correctly
+7. All special characters render properly throughout UI
+8. No syntax errors reported by VS Code
+
+### Preventative Actions
+- **Always create backup** before multi-line replacements in large files
+- **Avoid searching for emoji characters** in string replacement patterns - use surrounding context instead
+- **Use semantic_search** to understand code structure before attempting large refactors
+- **Test incrementally** - make one change, verify, then proceed
+- **Prefer git operations** for file recovery over text manipulation when corruption occurs
+- **Document character encoding** requirements in development setup (UTF-8 with BOM handling)
+- **Use multi_replace_string_in_file** for related changes to minimize risk
+- **Verify critical flows** (payment modal, card input) after any options.html modifications
+
+### Related Files
+- `options.html` - Main payment flow file (2500 lines)
+- `options.html.backup-before-test-main-copy` - Backup of corrupted version
+- `test-main-options.html` - Clean working reference from test/main branch
+- Lines affected: 380, 403-404, 414, 449, 505, 522, 581-584, 776, 829, 929, 1468, 1519, 1597, 2092, 2278, 2368
+
+### Lessons Learned
+1. **File size matters**: 2500+ line files are risky for automated text replacements
+2. **Encoding is fragile**: UTF-8 special characters can corrupt during copy operations between git branches
+3. **Recovery strategy**: When text manipulation fails, full file replacement from known-good source is often fastest solution
+4. **Initialization order**: JavaScript execution order matters - `stripeOverlay` declaration must occur after DOM elements defined
+5. **Progressive corruption**: Failed fix attempts can create cascading damage - know when to reset from working version
+6. **Visual validation essential**: Automated fixes may succeed technically but fail visually (encoding issues)
+
+### Time Impact
+Approximately 3-4 hours of debugging and recovery work due to:
+- Multiple failed string replacement attempts
+- Character encoding troubleshooting
+- Investigation of modal initialization order
+- Systematic restoration of 24+ special characters
+
+---
+## 12. Deploy Script Branch Confusion (prod-release → main switching)
+**Date observed:** 2025-10-07  
+**Resolved:** 2025-10-07  
+
+### Symptom
+User attempted to run "Deploy to Test" task while on `prod-release` branch. Script failed silently or showed unclear error messages about branch mismatch, causing confusion about correct workflow.
+
+### Impact
+Deployment workflow interruption; user uncertainty about proper branch management; potential for deploying from wrong branch without realizing it.
+
+### Root Cause (Single Statement)
+Deploy script's branch validation and auto-switching logic lacked clear visual feedback, making it difficult for users to understand when/why branch switches were happening or failing.
+
+### Contributing Factors
+- Script used `Out-Null` to suppress git checkout output, hiding what was happening
+- Error messages didn't clearly explain the branch switching logic
+- No visual confirmation when already on correct branch
+- Exit code checking was minimal, allowing silent failures
+
+### Fixes Implemented
+- Added explicit "Current branch: {name}" display at start of test deploy
+- Enhanced branch switching messages with emoji indicators:
+  - ✅ for successful operations
+  - 🔄 for in-progress switching
+  - ❌ for failures
+- Improved error messages with actionable instructions
+- Added explicit success confirmation when already on `main`
+- Added LASTEXITCODE checking after git checkout
+- Made all status messages use color coding (Cyan/Green/Red/Yellow)
+
+### Validation
+1. Running from `prod-release` with clean tree → shows clear switching message and switches to `main`
+2. Running from `prod-release` with dirty tree → shows clear error with instructions to commit/stash
+3. Running from `main` → shows confirmation that no switching needed
+4. All branch operations now visible and understandable to user
+
+### Preventative Actions
+- Always provide visual feedback for automated actions (especially git operations)
+- Use emoji indicators consistently across deployment scripts
+- Test deployment scripts from different branch states
+- Document expected branch workflows in script comments
+
+### Related Files
+- `deploy.ps1` (lines 14-34): Enhanced branch validation and switching logic
+
+---
+_Last updated: 2025-10-07_
