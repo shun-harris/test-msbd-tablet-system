@@ -382,12 +382,12 @@
               <div class="swap-wrap">
                 <div id="panePrimary" class="pane show">
                   <h3>Quick Actions</h3>
-                  <div class="grid2">
-                    <button id="btnCheck" class="btn">Check in: ${escapeHtml(CLASS_NAME)}</button>
-                    <button id="btnSingle" class="btn">Buy a Single Class</button>
+                  <div style="display:grid;gap:14px">
+                    <button id="btnCheck" class="btn" style="font-size:16px;padding:18px">Check in for FREE 6:30 Salsa Basics</button>
+                    <button id="btnSingle" class="btn">Pay for Class(es)</button>
+                    <button id="btnMembership" class="btn btn-gold">Purchase Unlimited Membership</button>
                   </div>
-                  <div class="grid2" style="margin-top:14px">
-                    <button id="btnMembership" class="btn btn-gold">Purchase Membership</button>
+                  <div style="margin-top:14px;display:none" id="doneButtonContainer">
                     <button id="btnDone" class="btn btn-done">Done</button>
                   </div>
                 </div>
@@ -504,8 +504,50 @@
           setTimeout(()=>{ 
             try{confetti({particleCount:120,spread:70,origin:{y:.6}});}catch(_){} 
             b.textContent="Checked in ✓";
+            
+            // Show upsell prompt after check-in
+            setTimeout(() => {
+              showCheckInUpsellPrompt();
+            }, 800);
           },180);
         };
+        
+        // Show upsell prompt after successful check-in
+        function showCheckInUpsellPrompt() {
+          const modal = document.createElement('div');
+          modal.id = 'checkin-upsell-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <div style="text-align:center;margin-bottom:24px">
+                <div style="font-size:48px;margin-bottom:12px">✓</div>
+                <h3 style="color:#b9f6ce;margin:0 0 8px;font-size:24px;font-weight:700">Checked in to Salsa Basics!</h3>
+                <p style="color:#cdd0d4;margin:0;font-size:15px">Want to stay for the next class?</p>
+              </div>
+              <div style="background:#0f1012;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px">
+                <div style="color:#f3f4f6;font-weight:600;margin-bottom:4px">Pre-purchase now:</div>
+                <div style="color:#cdd0d4;font-size:14px">Single Class - $20</div>
+              </div>
+              <div style="display:grid;gap:12px">
+                <button id="upsellYes" style="background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;transition:all 0.2s">Yes, Buy Next Class</button>
+                <button id="upsellNo" style="background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;transition:all 0.2s">No Thanks</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          
+          $("#upsellYes").onclick = () => {
+            modal.remove();
+            // Open payment modal for single class
+            openPaymentFlow('single', 1);
+          };
+          
+          $("#upsellNo").onclick = () => {
+            modal.remove();
+            // Show Done button - check-in complete
+            $("#doneButtonContainer").style.display = 'block';
+          };
+        }
 
         // Done → live home
         const doneButton = $("#btnDone");
@@ -539,8 +581,8 @@
           
           let titleText = "Single Class — choose a payment method";
           if(kind==="membership"){
-            if(tier==="gold") titleText = "Gold Membership ($196) — choose a payment method";
-            else if(tier==="silver") titleText = "Silver Membership ($672) — choose a payment method";
+            if(tier==="gold") titleText = "Gold Membership ($672) — choose a payment method";
+            else if(tier==="silver") titleText = "Silver Membership ($196) — choose a payment method";
           }
           payTitle.textContent = titleText;
           
@@ -564,8 +606,90 @@
           };
           if($("#payCash")) $("#payCash").onclick=showCashModal;
         }
-        $("#btnSingle").onclick=()=>openPayPane("single");
+        $("#btnSingle").onclick=()=>openPaymentFlow("single", 1);
         $("#btnMembership").onclick=()=>showMembershipSelectionModal();
+        
+        // New unified payment flow - shows Cash/Card choice first
+        function openPaymentFlow(kind, quantity, tier) {
+          const modal = document.createElement('div');
+          modal.id = 'payment-choice-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          let title = 'Single Class ($20)';
+          let description = 'Choose how you\'d like to pay';
+          
+          if (kind === 'membership') {
+            if (tier === 'gold') {
+              title = 'Gold Membership ($672)';
+              description = '16 weeks unlimited, then $42/week';
+            } else if (tier === 'silver') {
+              title = 'Silver Membership ($196)';
+              description = '4 weeks unlimited, then $49/week';
+            }
+          }
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">${title}</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">${description}</p>
+              
+              <div style="display:grid;gap:12px;margin-bottom:16px">
+                <button id="chooseCard" style="background:#d4af37;color:#1a1d1f;border:none;padding:18px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px">
+                  <span style="font-size:24px">💳</span>
+                  <span>Pay with Card</span>
+                </button>
+                <button id="chooseCash" style="background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:18px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px">
+                  <span style="font-size:24px">💵</span>
+                  <span>Pay with Cash</span>
+                </button>
+              </div>
+              
+              <button id="cancelPaymentChoice" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          $("#chooseCard").onclick = () => {
+            modal.remove();
+            ctx.kind = kind;
+            ctx.membershipTier = tier;
+            classQuantity = quantity || 1;
+            showStripeCardForm();
+          };
+          
+          $("#chooseCash").onclick = () => {
+            modal.remove();
+            showCashInstructions();
+          };
+          
+          $("#cancelPaymentChoice").onclick = () => modal.remove();
+        }
+        
+        // Show cash payment instructions
+        function showCashInstructions() {
+          const modal = document.createElement('div');
+          modal.id = 'cash-instructions-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);text-align:center">
+              <div style="font-size:64px;margin-bottom:16px">💵</div>
+              <h3 style="color:#f3f4f6;margin:0 0 12px;font-size:24px;font-weight:700">Cash Payment</h3>
+              <p style="color:#cdd0d4;margin:0 0 24px;font-size:16px;line-height:1.6">
+                Please head to registration to complete your payment.
+              </p>
+              <button id="cashOk" style="width:100%;background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px">OK</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          $("#cashOk").onclick = () => {
+            modal.remove();
+            location.href = SETTINGS.HOME_URL;
+          };
+        }
 
         // Membership selection modal
         function showMembershipSelectionModal() {
@@ -579,7 +703,7 @@
               <p style="color:#9ca3af;margin:0 0 28px;font-size:14px;text-align:center">Select the plan that works best for you</p>
               
               <div style="display:grid;gap:16px;margin-bottom:24px">
-                <!-- Gold Option (4 months) -->
+                <!-- Gold Option (16 weeks) -->
                 <label class="membership-option" data-tier="gold" style="display:flex;gap:16px;padding:20px;background:#2a2d2f;border:2px solid transparent;border-radius:12px;cursor:pointer;transition:all 0.2s">
                   <input type="radio" name="membership-tier" value="gold" style="width:20px;height:20px;margin-top:2px;cursor:pointer">
                   <div style="flex:1">
@@ -587,9 +711,9 @@
                       <span style="color:#d4af37;font-size:18px;font-weight:700">Gold Membership</span>
                       <span style="background:#d4af37;color:#1a1d1f;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">16 WEEKS</span>
                     </div>
-                    <div style="color:#f3f4f6;font-size:28px;font-weight:700;margin-bottom:8px">$600</div>
-                    <div style="color:#9ca3af;font-size:13px;margin-bottom:4px">4 months of unlimited classes</div>
-                    <div style="color:#d4af37;font-size:12px;font-weight:600">Then $49/week after your 16 weeks</div>
+                    <div style="color:#f3f4f6;font-size:28px;font-weight:700;margin-bottom:8px">$672</div>
+                    <div style="color:#9ca3af;font-size:13px;margin-bottom:4px">16 weeks of unlimited classes</div>
+                    <div style="color:#d4af37;font-size:12px;font-weight:600">Then $42/week after your 16 weeks</div>
                   </div>
                 </label>
                 
@@ -603,7 +727,7 @@
                     </div>
                     <div style="color:#f3f4f6;font-size:28px;font-weight:700;margin-bottom:8px">$196</div>
                     <div style="color:#9ca3af;font-size:13px;margin-bottom:4px">4 weeks of unlimited classes</div>
-                    <div style="color:#c0c0c0;font-size:12px;font-weight:600">Then $42/week after your 4 weeks</div>
+                    <div style="color:#c0c0c0;font-size:12px;font-weight:600">Then $49/week after your 4 weeks</div>
                   </div>
                 </label>
               </div>
@@ -680,8 +804,8 @@
             membershipError.textContent = '';
             modal.remove();
             
-            // Open payment pane with selected tier
-            openPayPane('membership', selectedTier.value);
+            // Open payment flow with selected tier
+            openPaymentFlow('membership', 1, selectedTier.value);
           };
         }
 
@@ -1610,32 +1734,40 @@
         function showPaymentSuccess() {
           if(requestOverlayClose('payment-success')) hideStripeCardForm();
           
+          // Show custom success modal with registration instructions
           const { amount } = getProductInfo();
-          const successOverlay = document.getElementById('paymentSuccessOverlay');
-          const successContent = document.getElementById('paymentSuccessContent');
-          const successAmount = document.getElementById('successAmount');
+          const modal = document.createElement('div');
+          modal.id = 'payment-success-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
           
-          // Prevent scrollbar during animation
-          document.body.classList.add('success-showing');
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);text-align:center">
+              <div style="width:80px;height:80px;margin:0 auto 20px;background:#1b2a19;border-radius:50%;display:flex;align-items:center;justify-content:center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#b9f6ce" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <h3 style="color:#b9f6ce;margin:0 0 8px;font-size:28px;font-weight:700">Payment Complete!</h3>
+              <div style="color:#f3f4f6;font-size:24px;font-weight:600;margin-bottom:24px">$${amount.toFixed(2)}</div>
+              <div style="background:#0f1012;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px">
+                <p style="color:#cdd0d4;margin:0;font-size:16px;line-height:1.6">
+                  Please head to registration to finish check-in.<br>
+                  <span style="color:#9ca3af;font-size:14px">Just give them your name and you're good to go!</span>
+                </p>
+              </div>
+              <button id="successOk" style="width:100%;background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px">OK</button>
+            </div>
+          `;
           
-          successAmount.textContent = `$${amount.toFixed(2)}`;
-          successOverlay.style.display = 'flex';
+          document.body.appendChild(modal);
           
-          // Trigger animation
-          setTimeout(() => {
-            successContent.classList.add('show');
-          }, 100);
+          // Confetti celebration
+          try{confetti({particleCount:120,spread:70,origin:{y:.6}});}catch(_){}
           
-          // Start slide-out animation and navigation after 2 seconds (reduced from 3)
-          setTimeout(() => {
-            // Start navigation immediately while slide-out begins
+          $("#successOk").onclick = () => {
+            modal.remove();
             location.href = SETTINGS.HOME_URL;
-            
-            // Start slide-out animation at the same time
-            successContent.style.transform = 'translateY(-50px)';
-            successContent.style.opacity = '0';
-            successContent.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-          }, 2000);
+          };
         }
 
         // Form submission for new cards
@@ -1714,19 +1846,23 @@
         let FORCE_GATE_EACH_OPEN = true; // toggle if you want to reuse session inside same visit
         showStripeCardForm = function() {
           resetOverlayCloseIntent(); // clear previous close state when opening
-          // Instead of clearing token (which causes session loss & reflow), keep token but force gate by pretending session inactive.
-          window.__forcePinGate = FORCE_GATE_EACH_OPEN; // consulted by pinStatus wrapper
           originalShowStripeCardForm();
+          
+          // NEW FLOW: Top section (new card) = NO PIN required
+          // Bottom section (saved cards) = PIN required
           const savedSection = document.getElementById('saved-cards-section');
           const savedCardsList = document.getElementById('saved-cards');
+          
+          // Show saved cards section (with PIN gate)
           if(savedSection) savedSection.style.opacity='1';
-          if(savedCardsList){ savedCardsList.style.visibility='hidden'; savedCardsList.innerHTML=''; }
-          // renderPinGate() handles PIN gate display AND loads cards if session is active
-          // Don't call pinStatus() again here - it was already called inside renderPinGate()
-          renderPinGate().then(() => {
-            // Cards are loaded by renderPinGate() if session is active
-            // No need to check status again
-          });
+          if(savedCardsList){ 
+            savedCardsList.style.visibility='hidden'; 
+            savedCardsList.innerHTML=''; 
+          }
+          
+          // Force PIN gate for saved cards section only
+          window.__forcePinGate = FORCE_GATE_EACH_OPEN;
+          renderPinGate();
         };
 
         // Add Card button handler
