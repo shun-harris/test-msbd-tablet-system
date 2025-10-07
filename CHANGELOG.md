@@ -3,6 +3,28 @@
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
 ## [Unreleased] - 2025-10-07
+### Added
+- **Options Page UI Redesign**: Complete visual refresh with gold theming and improved hierarchy
+  - Gold gradient "Make a Purchase" button with darker center for better text contrast
+  - Cream-colored outline and matching text (`#f5f1e8`) on purchase button
+  - Member-style gold profile circle with user initials (56px diameter with gradient)
+  - Gold outline button styling for "Check in for FREE" option (transparent background, gold border and text)
+  - Centered "What would you like to do?" headline
+  - Professional user profile card with horizontal layout, name prominence, and contact icons (📞 ✉️)
+  - Subtle "Not me?" link integrated within profile card (bottom-right, muted styling)
+
+### Changed
+- **Check-in Upsell Flow**: Improved user experience after free class check-in
+  - Upsell "Yes, Buy Next Class" now properly opens payment method choice (Card/Cash modal)
+  - Fixed flow that previously just closed modal without allowing purchase
+  - Users can now seamlessly transition from free check-in to paid class purchase
+- **Removed confusing elements**:
+  - Eliminated "You're all set — pick an option below" subtitle
+  - Removed "Done" button that confused users about workflow completion
+  - Replaced prominent "Not me" button with subtle integrated link
+- **Button Width Standardization**: All main action buttons constrained to 420px max-width for better visual balance
+- **User Profile Positioning**: Moved to bottom center with matching 420px max-width for layout consistency
+
 ### Fixed
 - **Critical**: Restored `options.html` from `test/main` branch after file corruption incident
   - File corruption occurred during multi-line string replacement operations (lines ~573-742)
@@ -10,13 +32,14 @@ All notable changes to this project are documented here. This file supersedes th
   - Full file replacement from working `test/main` branch restored all functionality
   - Payment modal now fully operational: card input renders, PIN gate appears, buttons responsive
   
-- **UTF-8 Character Encoding Restoration** (24+ corruptions fixed):
+- **UTF-8 Character Encoding Restoration** (30+ corruptions fixed):
   - Em dashes `—` (U+2014): Restored in welcome message, payment titles, guest/phone placeholders (was `ΓÇö`)
   - Checkmarks `✓` (U+2713): Restored in success messages, checked-in confirmations, PIN verification (was `Γ£ô`)
   - Bullet points `•` (U+2022): Restored in saved card masking "VISA •••• 4242" and debug shortcuts (was `ΓÇó`)
   - Minus signs `−` (U+2212): Restored in quantity decrease button (was `ΓêÆ`)
   - Apostrophes `'` (U+2019): Restored in "I'm Done" button (was `ΓÇÖ`)
-  - Ellipsis `…` (U+2026): Restored in "Loading saved cards…" message (was `ΓÇª`)
+  - Ellipsis `…` (U+2026): Restored in "Loading saved cards…", "Checking in…", "Generating QR…", "Diagnosing…", "Loading…", Stripe key truncation (was `ΓÇª`)
+  - Left arrow `←` (U+2190): Restored in "Back" button (was `ΓåÉ`)
   - Wink emoji 😉 (U+1F609): Restored in membership agreement text (was `≡ƒÿë`)
   - Money emoji 💵 (U+1F4B5): Restored in cash payment modal (was `≡ƒÆ╡`)
   - Magnifying glass emoji 🔍 (U+1F50D): Restored in debug console label (was `≡ƒöì`)
@@ -30,7 +53,12 @@ All notable changes to this project are documented here. This file supersedes th
 - Created backup `options.html.backup-before-test-main-copy` before file replacement
 - Documented incident in `ROOT_CAUSE.md` (Incident #11) with full debugging journey
 - Added payment modal architecture documentation to `README.md`
+- Added `getInitials()` helper function for profile circle display
+- Improved deploy script branch switching with better visual feedback and error handling
 - Lessons learned: Avoid searching for emoji characters in string replacements, always backup before risky operations
+
+### Verified
+- ✅ Debug toggle functionality confirmed working on test server (persists across reloads, shows green/gray states)
 
 ## [2.7.0] - 2025-10-06
 ### Added

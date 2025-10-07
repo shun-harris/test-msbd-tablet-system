@@ -542,4 +542,50 @@ Approximately 3-4 hours of debugging and recovery work due to:
 - Systematic restoration of 24+ special characters
 
 ---
+## 12. Deploy Script Branch Confusion (prod-release → main switching)
+**Date observed:** 2025-10-07  
+**Resolved:** 2025-10-07  
+
+### Symptom
+User attempted to run "Deploy to Test" task while on `prod-release` branch. Script failed silently or showed unclear error messages about branch mismatch, causing confusion about correct workflow.
+
+### Impact
+Deployment workflow interruption; user uncertainty about proper branch management; potential for deploying from wrong branch without realizing it.
+
+### Root Cause (Single Statement)
+Deploy script's branch validation and auto-switching logic lacked clear visual feedback, making it difficult for users to understand when/why branch switches were happening or failing.
+
+### Contributing Factors
+- Script used `Out-Null` to suppress git checkout output, hiding what was happening
+- Error messages didn't clearly explain the branch switching logic
+- No visual confirmation when already on correct branch
+- Exit code checking was minimal, allowing silent failures
+
+### Fixes Implemented
+- Added explicit "Current branch: {name}" display at start of test deploy
+- Enhanced branch switching messages with emoji indicators:
+  - ✅ for successful operations
+  - 🔄 for in-progress switching
+  - ❌ for failures
+- Improved error messages with actionable instructions
+- Added explicit success confirmation when already on `main`
+- Added LASTEXITCODE checking after git checkout
+- Made all status messages use color coding (Cyan/Green/Red/Yellow)
+
+### Validation
+1. Running from `prod-release` with clean tree → shows clear switching message and switches to `main`
+2. Running from `prod-release` with dirty tree → shows clear error with instructions to commit/stash
+3. Running from `main` → shows confirmation that no switching needed
+4. All branch operations now visible and understandable to user
+
+### Preventative Actions
+- Always provide visual feedback for automated actions (especially git operations)
+- Use emoji indicators consistently across deployment scripts
+- Test deployment scripts from different branch states
+- Document expected branch workflows in script comments
+
+### Related Files
+- `deploy.ps1` (lines 14-34): Enhanced branch validation and switching logic
+
+---
 _Last updated: 2025-10-07_

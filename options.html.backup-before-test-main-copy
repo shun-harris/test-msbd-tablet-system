@@ -1,0 +1,2634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Options Page</title>
+</head>
+<body>
+  <div id="app"></div>
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+
+  <style>
+    :root{
+      --gold1:#f3dc8a; --gold2:#b8922a;
+      --text:#f3f4f6; --muted:#c9cacc;
+      --panel:#131417; --ink:#0f0f10;
+      --darkBtn:#121316; --border:rgba(255,255,255,.10);
+      --success:#1f3a24; --successEdge:#2a5a36;
+      --warn:#2f1b12; --warnEdge:#5a3a2a;
+    }
+    html,body{height:100%;overflow:hidden}
+    body{margin:0;background:#0f0f10;color:var(--text);font-family:Inter,system-ui,Arial}
+
+    .stage{min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
+      padding:28px 12px 60px;}
+    .stack{width:min(980px,92%);margin:0 auto}
+
+    h1{margin:6px 0 8px;font-size:clamp(28px,5.8vw,48px);font-weight:900;text-align:center;line-height:1.1;opacity:0;animation:fadeInUp 0.5s ease-out 0.1s forwards}
+    .sub{color:var(--muted);text-align:center;margin:0 0 24px;font-size:clamp(13px,2.4vw,16px);font-weight:400;opacity:0;animation:fadeInUp 0.5s ease-out 0.2s forwards}
+    
+    @keyframes fadeInUp{
+      from{opacity:0;transform:translateY(15px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    @keyframes slideUp{
+      from{opacity:0;transform:translateY(20px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    
+    /* Compact user info bar for tablet */
+    .user-info-compact{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:14px;
+      padding:12px 16px;
+      margin:20px auto 0;
+      max-width:min(360px, 100%);
+      width:fit-content;
+      box-shadow:0 4px 16px rgba(0,0,0,0.2);
+      opacity:0;
+      animation:slideUp 0.6s ease-out 0.7s forwards;
+    }
+    .user-info-compact .avatar{
+      width:48px;
+      height:48px;
+      border-radius:50%;
+      background:linear-gradient(180deg,var(--gold1),var(--gold2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      color:#1b1400;
+      font-size:18px;
+      flex-shrink:0;
+      border:2px solid rgba(212,175,55,0.4);
+      box-shadow:0 2px 8px rgba(212,175,55,0.3);
+    }
+    .user-info-compact .details{
+      flex:1;
+      min-width:0;
+      text-align:left;
+    }
+    .user-info-compact .name{
+      font-weight:800;
+      font-size:clamp(15px,3vw,18px);
+      color:#f3f4f6;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      margin:0;
+    }
+    .user-info-compact .meta{
+      font-size:clamp(11px,2vw,13px);
+      color:var(--muted);
+      margin-top:2px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .user-info-compact .badge{
+      padding:2px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
+      font-size:10px;
+    }
+    .contact-item a:hover{
+      opacity:0.8;
+    }
+
+    .content-scroll{
+      max-height:calc(100vh - 280px);
+      overflow-y:auto;
+      overflow-x:hidden;
+      padding:0 4px;
+      margin-bottom:16px;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+    .content-scroll::-webkit-scrollbar{ display:none; }
+    
+    .card{background:linear-gradient(180deg,#141519,#101114);border:1px solid var(--border);
+      border-radius:16px;padding:28px 28px 20px 28px;margin-top:18px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
+      backdrop-filter:blur(10px);
+      opacity:0;animation:slideUp 0.6s ease-out 0.3s forwards;}
+    .card h3{margin:2px 0 16px;font-size:18px;font-weight:700;opacity:0;animation:fadeInUp 0.5s ease-out 0.4s forwards}
+
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
+
+    .lucide{display:inline-block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    
+    .btn{display:flex;align-items:center;justify-content:center;gap:10px;height:74px;
+      border-radius:12px;border:1px solid #b8922a;font-weight:600;
+      font-size:clamp(16px,3.2vw,18px);cursor:pointer;background:rgba(255,255,255,0.02);color:#f3dc8a;
+      transition:all .25s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      position:relative;overflow:hidden;opacity:0;}
+    .btn:nth-child(1){animation:slideUp 0.5s ease-out 0.5s forwards}
+    .btn:nth-child(2){animation:slideUp 0.5s ease-out 0.6s forwards}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(184,146,42,0.3), 0 0 30px rgba(243,220,138,0.2);background:rgba(184,146,42,0.08);border-color:#d4af37;}
+    .btn:active{transform:scale(0.97) translateY(0);transition:all .1s ease}
+    .btn-gold{background:linear-gradient(135deg,#d4af37 0%, #c9a532 50%, #d4af37 100%);color:#fff;
+      border:2px solid #b8922a;
+      box-shadow:0 0 0 2px rgba(0,0,0,0.6), 0 4px 12px rgba(212,175,55,0.4), 0 0 20px rgba(212,175,55,0.2);
+      position:relative;}
+    .btn-gold::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent,rgba(255,255,255,0.4),transparent);
+      transform:translateX(-100%);transition:transform 0.6s;}
+    .btn-gold::after{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.15),transparent);
+      border-radius:12px 12px 0 0;pointer-events:none;}
+    .btn-gold:hover::before{transform:translateX(100%)}
+    .btn-gold:hover{box-shadow:0 0 0 2px rgba(0,0,0,0.6), 0 6px 24px rgba(212,175,55,0.6), 0 0 35px rgba(243,220,138,0.4);background:linear-gradient(135deg,#ddb944 0%, #d4af37 50%, #ddb944 100%);}
+    .btn-gold:active{box-shadow:0 0 0 2px rgba(0,0,0,0.6), 0 2px 8px rgba(212,175,55,0.4);background:linear-gradient(135deg,#c29d2f 0%, #b8922a 50%, #c29d2f 100%);transform:scale(0.97) translateY(0)}
+    .btn-warn{background:#c44b1a;color:#ffffff;border:none; box-shadow:0 2px 8px rgba(196,75,26,0.3);}
+    .btn-warn:hover{box-shadow:0 4px 16px rgba(196,75,26,0.4); background:#c44b1a;}
+    .btn-done{background:#1a1d1f;border:1px solid rgba(243,244,246,0.1);color:#9ca3af;}
+    .btn-done:hover{background:#22252a; border-color:rgba(243,244,246,0.15);}
+    .btn-success{
+      background:linear-gradient(180deg,var(--success),#162619) !important;
+      color:#b9f6ce !important;
+      border-color:var(--successEdge) !important;
+      cursor:not-allowed !important;
+      opacity:.96;
+    }
+
+    .fieldCard{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:720px){ .fieldCard{grid-template-columns:1fr} }
+    .kv{background:#0f1012;border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+    .kv .k{color:#a9abb0;font-size:12px;margin:0 0 6px}
+    .kv .v{font-weight:700}
+
+    .minor-row{display:flex;justify-content:center;margin-top:12px;}
+    .link-btn{background:transparent;border:0;cursor:pointer;color:#6b7280;font-weight:600;
+      font-size:clamp(14px,2.6vw,16px);padding:8px 12px;border-radius:10px;text-decoration:none;
+      transition:all 0.2s;opacity:0;animation:fadeInUp 0.5s ease-out 0.8s forwards;}
+    .link-btn:hover{color:#9ca3af;text-decoration:underline;background:rgba(255,255,255,.04)}
+
+    .swap-wrap{position:relative;min-height:220px;}
+    .pane{transition:opacity .22s ease,transform .22s ease;}
+    .pane.hide{opacity:0;transform:translateY(8px);pointer-events:none;position:absolute;inset:0;}
+    .pane.show{opacity:1;transform:none;position:relative;}
+
+    .payTitle{text-align:center;margin:2px 0 12px;font-weight:800;opacity:.9;}
+    .payTitle > div:first-child{text-align:center;margin-bottom:16px;}
+
+    /* QR Overlay */
+    #qrOverlay{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+      z-index:1000;align-items:center;justify-content:center;
+    }
+    #qrBox{
+      background:#141519;border-radius:16px;padding:22px;text-align:center;
+      max-width:92%;box-shadow:0 0 40px rgba(0,0,0,.5);
+    }
+    
+    /* Stripe Card Overlay */
+    #stripeOverlay{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+      z-index:1000;align-items:center;justify-content:center;
+    }
+    #stripeBox{
+      background:#141519;border-radius:16px;padding:28px;text-align:left;
+      max-width:500px;width:92%;box-shadow:0 0 40px rgba(0,0,0,.5);
+    }
+    #stripeBox h3{
+      color:#f3f4f6;margin:0 0 20px;font-size:24px;font-weight:800;
+    }
+    #card-element{
+      background:#0f1012;border:1px solid var(--border);border-radius:12px;
+      padding:14px;margin-bottom:20px;
+    }
+    .stripe-buttons{
+      display:flex;gap:12px;justify-content:flex-end;
+    }
+    .stripe-buttons .btn{
+      height:48px;min-width:120px;
+    }
+    
+    /* Payment Success Animation */
+    .payment-success-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      pointer-events: none; /* Prevent any interaction during transition */
+    }
+    
+    /* Prevent scrollbar during success animation */
+    body.success-showing {
+      overflow: hidden !important;
+    }
+    
+    .payment-success-content {
+      text-align: center;
+      transform: scale(0.8);
+      opacity: 0;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .payment-success-content.show {
+      transform: scale(1);
+      opacity: 1;
+    }
+    
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      margin: 0 auto 24px;
+      position: relative;
+      box-shadow: 0 0 40px rgba(16, 185, 129, 0.4);
+    }
+    
+    .success-checkmark::after {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 12px;
+      border: 3px solid white;
+      border-top: none;
+      border-right: none;
+      transform: rotate(-45deg);
+      top: 50%;
+      left: 50%;
+      margin-top: -8px;
+      margin-left: -12px;
+      animation: checkmark 0.8s ease-in-out 0.3s both;
+    }
+    
+    @keyframes checkmark {
+      0% {
+        width: 0;
+        height: 0;
+      }
+      25% {
+        width: 0;
+        height: 12px;
+      }
+      100% {
+        width: 24px;
+        height: 12px;
+      }
+    }
+    
+    .success-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #f3f4f6;
+      margin-bottom: 12px;
+      animation: fadeInUp 0.6s ease-out 0.5s both;
+    }
+    
+    .success-subtitle {
+      font-size: 16px;
+      color: #9ca3af;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease-out 0.7s both;
+    }
+    
+    .success-amount {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--gold1);
+      margin-bottom: 24px;
+      animation: fadeInUp 0.6s ease-out 0.9s both;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .success-pulse {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.3);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1.5);
+        opacity: 0;
+      }
+    }
+    #qrImg{width:320px;height:320px;display:block;margin:0 auto 16px;background:#fff;border-radius:12px;}
+    /* center the overlay "I'm Done" button */
+    #qrDone{ display:block; margin:14px auto 0; }
+
+    /* Cash Modal */
+    .modalOverlay{
+      display:none; position:fixed; inset:0; z-index:1100;
+      background:rgba(0,0,0,.85); align-items:center; justify-content:center;
+    }
+    .modalBox{
+      background:#141519; border:1px solid rgba(255,255,255,.10);
+      border-radius:16px; padding:22px; max-width:min(520px,92%); text-align:center;
+      box-shadow:0 0 40px rgba(0,0,0,.5);
+    }
+    .modalBox h3{ margin:0 0 8px; font-size:20px; font-weight:900; }
+    .modalBox p{ margin:0 0 14px; color:#cfd3da; }
+    .modalBox .btn{ height:auto; padding:12px 28px; font-size:18px; border-radius:10px; margin:0 auto; display:inline-flex; }
+  </style>
+
+  <script>
+    // ===== Auto Toggle Live/Dev =====
+    const DEV =
+      location.hostname === 'localhost' ||
+      location.hostname === '127.0.0.1' ||
+      location.hostname === '0.0.0.0' ||
+      location.hostname === '::1' ||
+      location.protocol === 'file:'; // double-clicking an .html file
+
+    const TEST = location.hostname === 'test.tablet.msbdance.com';
+
+    // ===== Settings =====
+    const SETTINGS = {
+      HOME_URL: DEV
+        ? './index.html'
+        : TEST
+        ? 'https://test.tablet.msbdance.com/'
+        : 'https://tablet.msbdance.com/',
+      OPTIONS_URL: DEV
+        ? './options.html'
+        : TEST
+        ? 'https://test.tablet.msbdance.com/options.html'
+        : 'https://tablet.msbdance.com/options.html',
+    };
+
+    (function(){
+      const MAKE_ROUTE_URL="https://hook.us1.make.com/7o1igxij7s24myaep5mtc5k6fvxunqh8";
+      const GHL_WEBHOOK_URL="https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/1b53b6bb-c54a-45d9-8f47-7816dd36cab0";
+      const CLASS_NAME="Salsa Basics";
+      const $=(s,r=document)=>r.querySelector(s);
+
+      const qs=new URLSearchParams(location.search);
+      const phone=(qs.get("phone")||"").replace(/\D/g,"").slice(-10);
+      const name=(qs.get("name")||"").trim();
+      const email=(qs.get("email")||"").trim();
+      const back=qs.get("back")||"";
+      const ctx={kind:null};
+
+      const escapeHtml=s=>String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+      function sendGHLCheckin(phone){
+        if (!phone) return;
+        const u=`${GHL_WEBHOOK_URL}?phone=${encodeURIComponent(phone)}&evt=free_salsa_basics&src=tablet&ts=${Date.now()}`;
+        new Image().src=u;
+      }
+      async function routeViaMakeDirect({phone,name,product}){
+        try{
+          const r=await fetch(MAKE_ROUTE_URL,{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({phone,name,product,src:"tablet",ts:Date.now()})});
+          if(!r.ok) return null;
+          const d=await r.json().catch(()=>null);
+          return d && d.url ? d.url : null;
+        }catch(_){return null;}
+      }
+
+      function show(el){el.classList.remove("hide");el.classList.add("show");}
+      function hide(el){el.classList.remove("show");el.classList.add("hide");}
+
+      function showQr(url){
+        const qrOverlay=$("#qrOverlay"),qrImg=$("#qrImg");
+        qrImg.src=`https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(url)}`;
+        qrOverlay.style.display="flex";
+        try{confetti({particleCount:80,spread:60,origin:{y:.6}});}catch(_){}
+      }
+
+      function showCashModal(){
+        const el=$("#cashOverlay");
+        el.style.display="flex";
+        try{confetti({particleCount:40,spread:50,origin:{y:.6}});}catch(_){}
+        $("#cashOk").onclick=()=>{location.href=SETTINGS.HOME_URL;};
+      }
+
+      function ensureIdentity(){
+        const hasParams = !!(phone || name || email);
+        const stored = JSON.parse(localStorage.getItem('devIdentity')||'{}');
+        if(!hasParams){
+          // If we have a stored identity, auto redirect with params
+            if(stored.phone||stored.name||stored.email){
+              const p = new URLSearchParams({
+                phone: stored.phone||'',
+                name: stored.name||'',
+                email: stored.email||''
+              });
+              location.search = '?' + p.toString();
+              return false; // wait for reload
+            }
+        }
+        return true;
+      }
+
+      function maybeRenderIdentityPrompt(){
+        if(phone || name || email) return false;
+        document.getElementById('app').innerHTML = `
+          <div class="stage"><div class="stack">
+            <h1>Local Dev Identity</h1>
+            <p class="sub">Enter a test identity to simulate tablet query params.</p>
+            <div class="card" style="max-width:520px;margin:0 auto">
+              <form id="devIdentForm" style="display:grid;gap:14px">
+                <input id="devPhone" placeholder="Phone (10 digits)" value="" pattern="\\d{10}" inputmode="numeric" style="padding:12px;border:1px solid var(--border);border-radius:10px;background:#0f1012;color:#fff;font-size:16px">
+                <input id="devName" placeholder="Name" value="" style="padding:12px;border:1px solid var(--border);border-radius:10px;background:#0f1012;color:#fff;font-size:16px">
+                <input id="devEmail" placeholder="Email (optional)" value="" style="padding:12px;border:1px solid var(--border);border-radius:10px;background:#0f1012;color:#fff;font-size:16px">
+                <button class="btn btn-gold" style="height:60px">Continue</button>
+                <div style="font-size:11px;opacity:.65;line-height:1.4">Data is stored only in your browser localStorage (devIdentity) for convenience. Clear it by submitting empty or using localStorage.removeItem('devIdentity').</div>
+              </form>
+            </div>
+          </div></div>`;
+        const f=document.getElementById('devIdentForm');
+        f.onsubmit=e=>{
+          e.preventDefault();
+          const pVal=document.getElementById('devPhone').value.replace(/\D/g,'').slice(-10);
+          const nVal=document.getElementById('devName').value.trim();
+          const eVal=document.getElementById('devEmail').value.trim();
+          localStorage.setItem('devIdentity', JSON.stringify({ phone:pVal, name:nVal, email:eVal }));
+          const params = new URLSearchParams({ phone:pVal, name:nVal, email:eVal });
+          location.search='?'+params.toString();
+        };
+        return true;
+      }
+
+      function renderMain(){
+        if(!ensureIdentity()) return; // reload pending with stored identity
+        if(maybeRenderIdentityPrompt()) return; // prompt shown
+        
+        // Get initials for avatar
+        const getInitials = (name) => {
+          if (!name) return "U";
+          const parts = String(name).split(/\s+/).filter(Boolean);
+          if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+          return parts[0] ? parts[0][0].toUpperCase() : "U";
+        };
+        
+        document.getElementById("app").innerHTML=`
+          <div class="stage"><div class="stack">
+            <h1>Welcome${name ? `, ${escapeHtml(name)}` : ''}!</h1>
+            <p class="sub">What would you like to do today?</p>
+            <div class="card">
+              <div class="swap-wrap">
+                <div id="panePrimary" class="pane show">
+                  <div style="display:grid;gap:14px;max-width:420px;margin:0 auto 0 auto">
+                    <button id="btnCheck" class="btn" style="font-size:16px;padding:18px">Check in for FREE 6:30 Salsa Basics</button>
+                    <button id="btnPurchase" class="btn btn-gold" style="margin-bottom:0"><i class="lucide lucide-shopping-bag"></i> Make a Purchase</button>
+                  </div>
+                  <div style="margin-top:14px;display:none;width:100%" id="doneButtonContainer">
+                    <button id="btnDone" class="btn btn-done" style="width:100%;padding:16px;font-size:16px">Done</button>
+                  </div>
+                </div>
+                <div id="panePay" class="pane hide">
+                  <div class="payTitle" id="payTitle"></div>
+                  <div class="grid2" id="payOptions"></div>
+                  <div class="grid2" style="margin-top:14px">
+                    <button id="payBack" class="btn">← Back</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="user-info-compact">
+              <div class="avatar">${getInitials(name)}</div>
+              <div class="details">
+                <div class="name">${name ? escapeHtml(name) : 'Guest'}</div>
+                <div class="meta">
+                  ${phone ? `<span class="badge">📞 ${phone}</span>` : ''}
+                  ${email ? `<span class="badge">✉️ ${email}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div class="minor-row"><button id="notMeGoBack" class="link-btn">Not me</button></div>
+          </div></div>
+
+          <!-- QR Overlay -->
+          <div id="qrOverlay">
+            <div id="qrBox">
+              <h3>Scan QR Code to Pay on Your Phone</h3>
+              <div id="qrCodeDisplay"></div>
+              <button id="qrClose" class="btn btn-warn">Cancel</button>
+            </div>
+          </div>
+
+          <div id="stripeOverlay">
+            <div id="stripeBox">
+              <h3 id="stripe-modal-title">Enter Card Information</h3>
+              
+              <!-- Quantity Selector (only for single classes) -->
+              <div id="quantity-section" style="background: #0f1012; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <span style="font-weight: 700; color: #f3f4f6;">Quantity:</span>
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <button type="button" id="qty-minus" class="btn" style="height: 40px; min-width: 40px; padding: 0; font-size: 16px; opacity: 1;">−</button>
+                    <span id="quantity-display" style="font-size: 18px; font-weight: 800; min-width: 20px; text-align: center; color: #f3f4f6;">1</span>
+                    <button type="button" id="qty-plus" style="height: 40px; min-width: 40px; padding: 0; font-size: 16px; font-weight: 700; line-height: 1; background: #d4af37; color: #1a1d1f; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s;">+</button>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="color: #9ca3af;">$20 per class</span>
+                  <span style="font-size: 20px; font-weight: 800; color: var(--gold1);" id="total-display">$20</span>
+                </div>
+              </div>
+              
+              <form id="payment-form">
+                <div id="card-element"></div>
+                <p id="card-error" role="alert" style="color: #ff6b6b; display: none; margin: 10px 0;"></p>
+                <div class="stripe-buttons" style="display:flex;gap:12px;margin-top:20px">
+                  <button type="button" id="stripe-cancel" style="flex:1;background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;transition:background 0.2s">Cancel</button>
+                  <button type="submit" id="stripe-submit" style="flex:1;background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Confirm Purchase</button>
+                </div>
+              </form>
+              
+              <div id="saved-cards-section" style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                  <h4 style="color: #f3f4f6; margin: 0;">Or use a saved card:</h4>
+                  <button id="add-card-btn" type="button" style="background:#1b2a19;color:#b9f6ce;border:1px solid #2a5a36;padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Card
+                  </button>
+                </div>
+                <!-- PIN Gate Container (shown until session established) -->
+                <div id="pin-gate" style="background:#0f1012;border:1px dashed var(--border);border-radius:12px;padding:16px;margin-bottom:16px;display:none"></div>
+                <div id="saved-cards" class="fieldCard">
+                  <!-- Cards will be dynamically populated here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+
+        // Show upsell prompt after successful check-in
+        function showCheckInUpsellPrompt() {
+          const modal = document.createElement('div');
+          modal.id = 'checkin-upsell-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <div style="text-align:center;margin-bottom:24px">
+                <div style="font-size:48px;margin-bottom:12px">✓</div>
+                <h3 style="color:#b9f6ce;margin:0 0 8px;font-size:24px;font-weight:700">Checked in to Salsa Basics!</h3>
+                <p style="color:#cdd0d4;margin:0;font-size:15px">Want to stay for the next class?</p>
+              </div>
+              <div style="background:#0f1012;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px">
+                <div style="color:#f3f4f6;font-weight:600;margin-bottom:4px">Pre-purchase now:</div>
+                <div style="color:#cdd0d4;font-size:14px">Single Class - $20</div>
+              </div>
+              <div style="display:grid;gap:12px">
+                <button id="upsellYes" style="background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;transition:all 0.2s">Yes, Buy Next Class</button>
+                <button id="upsellNo" style="background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;transition:all 0.2s">No Thanks</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          
+          $("#upsellYes").onclick = () => {
+            modal.remove();
+            // Open payment method choice modal (Card or Cash) for single class
+            showPaymentMethodChoice('single', 1);
+          };
+          
+          $("#upsellNo").onclick = () => {
+            modal.remove();
+            // Redirect to home - check-in complete
+            location.href = SETTINGS.HOME_URL;
+          };
+        }
+
+        // Stripe overlay reference (needs to be before button handlers)
+        const stripeOverlay = document.getElementById('stripeOverlay');
+        
+        // Intent flag + reason tracking. Only specific reasons may close overlay.
+        ;(function(){
+          const VALID_CLOSE_REASONS = new Set(['user-cancel','payment-success']);
+          let _closeIntent = false;
+          let _closeReason = null;
+          Object.defineProperty(window,'__overlayShouldClose',{
+            get(){ return _closeIntent; },
+            set(v){
+              console.warn('[PIN][Overlay] Direct set attempt ignored. Use requestOverlayClose(reason).');
+            }
+          });
+          window.requestOverlayClose = function(reason){
+            if(!VALID_CLOSE_REASONS.has(reason)){
+              console.warn('[PIN][Overlay] Invalid close reason:', reason);
+              return false;
+            }
+            _closeIntent = true; _closeReason = reason;
+            console.log('[PIN][Overlay] Close authorized:', reason);
+            return true;
+          };
+          window.getOverlayCloseReason = ()=>_closeReason;
+          window.resetOverlayCloseIntent = ()=>{ _closeIntent=false; _closeReason=null; };
+          resetOverlayCloseIntent();
+        })();
+
+        // wire buttons
+        const panePrimary=$("#panePrimary"),panePay=$("#panePay");
+        const payTitle=$("#payTitle"),payOptions=$("#payOptions");
+        if(back) $("#notMeGoBack").onclick=()=>{location.href=back}; else $("#notMeGoBack").style.display="none";
+
+        // CHECK-IN button: fade green + lock
+        $("#btnCheck").onclick=()=>{ 
+          if(!phone) return; 
+          const b=$("#btnCheck");
+          b.disabled=true;
+          b.textContent="Checking in…";
+          b.classList.add("btn-success");
+          sendGHLCheckin(phone);
+          setTimeout(()=>{ 
+            try{confetti({particleCount:120,spread:70,origin:{y:.6}});}catch(_){} 
+            b.textContent="Checked in ✓";
+            
+            // Show upsell prompt after check-in
+            setTimeout(() => {
+              showCheckInUpsellPrompt();
+            }, 800);
+          },180);
+        };
+        
+        // Show upsell prompt after successful check-in
+        function showCheckInUpsellPrompt() {
+          const modal = document.createElement('div');
+          modal.id = 'checkin-upsell-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <div style="text-align:center;margin-bottom:24px">
+                <div style="font-size:48px;margin-bottom:12px">✓</div>
+                <h3 style="color:#b9f6ce;margin:0 0 8px;font-size:24px;font-weight:700">Checked in to Salsa Basics!</h3>
+                <p style="color:#cdd0d4;margin:0;font-size:15px">Want to stay for the next class?</p>
+              </div>
+              <div style="background:#0f1012;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px">
+                <div style="color:#f3f4f6;font-weight:600;margin-bottom:4px">Pre-purchase now:</div>
+                <div style="color:#cdd0d4;font-size:14px">Single Class - $20</div>
+              </div>
+              <div style="display:grid;gap:12px">
+                <button id="upsellYes" style="background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;transition:all 0.2s">Yes, Buy Next Class</button>
+                <button id="upsellNo" style="background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;transition:all 0.2s">No Thanks</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          
+          $("#upsellYes").onclick = () => {
+            modal.remove();
+            // Open payment method choice modal (Card or Cash) for single class
+            showPaymentMethodChoice('single', 1);
+          };
+          
+          $("#upsellNo").onclick = () => {
+            modal.remove();
+            // Redirect to home - check-in complete
+            location.href = SETTINGS.HOME_URL;
+          };
+        }
+
+        // Done → live home
+        const doneButton = $("#btnDone");
+        if (doneButton) {
+          doneButton.onclick = () => {
+            console.log("Button clicked"); // Log button click
+            console.log("DEV mode:", DEV); // Log DEV mode status
+
+            // Redirect logic
+            location.href = SETTINGS.HOME_URL;
+          };
+        } else {
+          console.error("Done button not found"); // Log error if button is missing
+        }
+
+        // Add quantity tracking
+        let classQuantity = 1;
+        
+        function updateClassTotal() {
+          const total = classQuantity * 20;
+          const quantityDisplay = document.getElementById('quantity-display');
+          const totalDisplay = document.getElementById('total-display');
+          if (quantityDisplay) quantityDisplay.textContent = classQuantity;
+          if (totalDisplay) totalDisplay.textContent = `$${total}`;
+        }
+        
+        function openPayPane(kind, tier){
+          ctx.kind=kind;
+          ctx.membershipTier = tier; // Store tier (gold/silver)
+          classQuantity = 1; // Reset quantity
+          
+          let titleText = "Single Class — choose a payment method";
+          if(kind==="membership"){
+            if(tier==="gold") titleText = "Gold Membership ($672) — choose a payment method";
+            else if(tier==="silver") titleText = "Silver Membership ($196) — choose a payment method";
+          }
+          payTitle.textContent = titleText;
+          
+          let buttons=`
+            <button id="payCard" class="btn btn-gold">Enter card info</button>
+            <button id="payQR" class="btn">Pay on phone (QR)</button>`;
+          if(kind!=="membership"){buttons+=`<button id="payCash" class="btn btn-warn">Pay with cash</button>`;}
+          payOptions.innerHTML=buttons;
+          hide(panePrimary);show(panePay);
+
+          $("#payBack").onclick=()=>{hide(panePay);show(panePrimary)};
+          $("#payCard").onclick=()=>{
+            showStripeCardForm();
+          };
+          $("#payQR").onclick=async()=>{
+            const btn=$("#payQR");btn.textContent="Generating QR…";btn.disabled=true;
+            const product=(ctx.kind==="membership")?"membershipqr":"singleqr";
+            let url=await routeViaMakeDirect({phone,name,product});
+            btn.textContent="Pay on phone (QR)";btn.disabled=false;
+            if(url) showQr(url); else alert("QR unavailable.");
+          };
+          if($("#payCash")) $("#payCash").onclick=showCashModal;
+        }
+        $("#btnPurchase").onclick=()=>showPurchaseTypeModal();
+        
+        // Step 1: Show purchase type choice (Group Classes OR Membership)
+        function showPurchaseTypeModal() {
+          const modal = document.createElement('div');
+          modal.id = 'purchase-type-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">What would you like to purchase?</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">Choose one option below</p>
+              
+              <div style="display:grid;gap:12px;margin-bottom:16px">
+                <button id="chooseGroupClasses" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Group Class(es)
+                </button>
+                <button id="chooseMembership" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Unlimited Membership
+                </button>
+              </div>
+              
+              <button id="cancelPurchaseType" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          $("#chooseGroupClasses").onclick = () => {
+            modal.remove();
+            showPaymentMethodChoice("single", 1);
+          };
+          
+          $("#chooseMembership").onclick = () => {
+            modal.remove();
+            showMembershipTierChoice();
+          };
+          
+          $("#cancelPurchaseType").onclick = () => modal.remove();
+        }
+        
+        // Step 2a: Show payment method choice (Card OR Cash) for group classes
+        function showPaymentMethodChoice(kind, quantity, tier) {
+          const modal = document.createElement('div');
+          modal.id = 'payment-choice-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          let title = 'Group Class ($20)';
+          let description = 'How would you like to pay?';
+          
+          if (kind === 'membership') {
+            if (tier === 'gold') {
+              title = 'Gold Membership ($672)';
+              description = 'Pay by card only';
+            } else if (tier === 'silver') {
+              title = 'Silver Membership ($196)';
+              description = 'Pay by card only';
+            }
+          }
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">${title}</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">${description}</p>
+              
+              <div style="display:grid;gap:12px;margin-bottom:16px">
+                <button id="chooseCard" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Pay with Card
+                </button>
+                ${kind === 'single' ? `<button id="chooseCash" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Pay with Cash
+                </button>` : ''}
+              </div>
+              
+              <button id="cancelPaymentChoice" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          $("#chooseCard").onclick = () => {
+            modal.remove();
+            ctx.kind = kind;
+            ctx.membershipTier = tier;
+            classQuantity = quantity || 1;
+            showStripeCardForm();
+          };
+          
+          if ($("#chooseCash")) {
+            $("#chooseCash").onclick = () => {
+              modal.remove();
+              showCashInstructions();
+            };
+          }
+          
+          $("#cancelPaymentChoice").onclick = () => modal.remove();
+        }
+        
+        // Step 2b: Show membership tier choice (Gold OR Silver)
+        function showMembershipTierChoice() {
+          const modal = document.createElement('div');
+          modal.id = 'membership-tier-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">Choose Your Membership</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">Select one option below</p>
+              
+              <div style="display:grid;gap:12px;margin-bottom:16px">
+                <button id="chooseGold" style="background:#d4af37;color:#1a1d1f;border:none;padding:24px;border-radius:10px;cursor:pointer;text-align:left">
+                  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Gold - $672</div>
+                  <div style="font-size:13px;opacity:0.9">16 weeks unlimited, then $42/week</div>
+                </button>
+                <button id="chooseSilver" style="background:#c0c0c0;color:#1a1d1f;border:none;padding:24px;border-radius:10px;cursor:pointer;text-align:left">
+                  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Silver - $196</div>
+                  <div style="font-size:13px;opacity:0.9">4 weeks unlimited, then $49/week</div>
+                </button>
+              </div>
+              
+              <button id="cancelMembershipTier" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          $("#chooseGold").onclick = () => {
+            modal.remove();
+            showMembershipAgreement('gold');
+          };
+          
+          $("#chooseSilver").onclick = () => {
+            modal.remove();
+            showMembershipAgreement('silver');
+          };
+          
+          $("#cancelMembershipTier").onclick = () => modal.remove();
+        }
+        
+        // Step 3: Show membership agreement and then proceed to card payment
+        function showMembershipAgreement(tier) {
+          const isGold = tier === 'gold';
+          const price = isGold ? '$672' : '$196';
+          const weeks = isGold ? '16' : '4';
+          const weeklyRate = isGold ? '$42' : '$49';
+          const tierName = isGold ? 'Gold' : 'Silver';
+          
+          const modal = document.createElement('div');
+          modal.id = 'membership-agreement-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:550px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin:20px 0">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">${tierName} Membership - ${price}</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">${weeks} weeks unlimited, then ${weeklyRate}/week</p>
+              
+              <!-- Agreement Checkboxes -->
+              <div style="background:#0f1012;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
+                <label style="display:flex;gap:12px;margin-bottom:16px;cursor:pointer">
+                  <input type="checkbox" id="agree-billing" style="width:18px;height:18px;margin-top:2px;cursor:pointer;flex-shrink:0">
+                  <span style="color:#e5e7eb;font-size:14px;line-height:1.5">
+                    I understand that <strong style="color:#10b981">weekly billing will start automatically</strong> after my ${weeks}-week period ends.
+                  </span>
+                </label>
+                
+                <label style="display:flex;gap:12px;cursor:pointer">
+                  <input type="checkbox" id="agree-no-complaints" style="width:18px;height:18px;margin-top:2px;cursor:pointer;flex-shrink:0">
+                  <span style="color:#e5e7eb;font-size:14px;line-height:1.5">
+                    I won't complain or act surprised when weekly charges begin. 😉 <span style="color:#9ca3af">(Pro tip: Set a calendar reminder!)</span>
+                  </span>
+                </label>
+              </div>
+              
+              <div style="display:grid;gap:12px">
+                <button id="agreeContinue" disabled style="width:100%;background:#10b981;color:white;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:not-allowed;font-size:16px;opacity:0.5;transition:all 0.2s">
+                  Continue to Payment
+                </button>
+                <button id="cancelAgreement" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          const billing = $("#agree-billing");
+          const noComplaints = $("#agree-no-complaints");
+          const continueBtn = $("#agreeContinue");
+          
+          function checkAgreements() {
+            if (billing.checked && noComplaints.checked) {
+              continueBtn.disabled = false;
+              continueBtn.style.cursor = 'pointer';
+              continueBtn.style.opacity = '1';
+            } else {
+              continueBtn.disabled = true;
+              continueBtn.style.cursor = 'not-allowed';
+              continueBtn.style.opacity = '0.5';
+            }
+          }
+          
+          billing.onchange = checkAgreements;
+          noComplaints.onchange = checkAgreements;
+          
+          $("#agreeContinue").onclick = () => {
+            if (billing.checked && noComplaints.checked) {
+              modal.remove();
+              showPaymentMethodChoice('membership', 1, tier);
+            }
+          };
+          
+          $("#cancelAgreement").onclick = () => modal.remove();
+        }
+        
+        // Show cash payment instructions
+        function showCashInstructions() {
+          const modal = document.createElement('div');
+          modal.id = 'cash-instructions-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);text-align:center">
+              <div style="font-size:64px;margin-bottom:16px">💵</div>
+              <h3 style="color:#f3f4f6;margin:0 0 12px;font-size:24px;font-weight:700">Cash Payment</h3>
+              <p style="color:#cdd0d4;margin:0 0 24px;font-size:16px;line-height:1.6">
+                Please head to registration to complete your payment.
+              </p>
+              <div style="display:grid;gap:12px">
+                <button id="cashOk" style="width:100%;background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px">OK</button>
+                <button id="payCardInstead" style="width:100%;background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:14px;border-radius:10px;font-weight:500;cursor:pointer;font-size:14px">Pay with Card Instead</button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          // Use querySelector on the modal element directly
+          const cashOkBtn = modal.querySelector('#cashOk');
+          const payCardBtn = modal.querySelector('#payCardInstead');
+          
+          console.log('Cash modal buttons:', { cashOkBtn, payCardBtn, homeUrl: SETTINGS.HOME_URL });
+          
+          if (cashOkBtn) {
+            cashOkBtn.onclick = function(e) {
+              console.log('Cash OK button clicked!');
+              try {
+                e.preventDefault();
+                e.stopPropagation();
+                const homeUrl = SETTINGS.HOME_URL;
+                console.log('Removing modal and redirecting to:', homeUrl);
+                modal.remove();
+                console.log('Modal removed, about to redirect...');
+                window.location.href = homeUrl;
+                console.log('Redirect command executed');
+              } catch (error) {
+                console.error('Error in cash OK handler:', error);
+                alert('Error: ' + error.message);
+              }
+            };
+          } else {
+            console.error('Cash OK button not found!');
+          }
+          
+          if (payCardBtn) {
+            payCardBtn.onclick = function(e) {
+              console.log('Pay with card instead clicked');
+              e.preventDefault();
+              e.stopPropagation();
+              modal.remove();
+              ctx.kind = 'single';
+              classQuantity = 1;
+              showStripeCardForm();
+            };
+          } else {
+            console.error('Pay card button not found!');
+          }
+        }
+        // Overlay close goes back to home (main input page)
+        $("#qrDone").onclick=()=>{ location.href = SETTINGS.HOME_URL; };
+
+        // Fix 'Not me' button logic
+        if (back) {
+          const notMeButton = $("#notMeGoBack");
+          notMeButton.onclick = () => {
+            let dest = SETTINGS.HOME_URL; // Default fallback
+            try {
+              const decodedBack = decodeURIComponent(back);
+              if (/^https?:\/\//i.test(decodedBack)) {
+                dest = decodedBack;
+              }
+            } catch (error) {
+              console.error("Failed to decode 'back' parameter:", error);
+            }
+            location.href = dest;
+          };
+        } else {
+          $("#notMeGoBack").style.display = "none";
+        }
+
+        // ===== ON-SCREEN DEBUG CONSOLE (Local only, or ?debug=1) =====
+        const SHOW_DEBUG = (DEV && location.hostname === 'localhost') || qs.get('debug')==='1' || localStorage.getItem('debug')==='1';
+        if(SHOW_DEBUG){
+          const debugConsole = document.createElement('div');
+          debugConsole.id = 'onScreenDebug';
+          debugConsole.innerHTML = `
+            <style>
+              #onScreenDebug{position:fixed;bottom:8px;left:8px;width:min(500px,94vw);max-height:50vh;background:#0a0b0d;border:3px solid #f59e0b;border-radius:12px;z-index:99999 !important;font-family:ui-monospace,monospace;font-size:11px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.95);pointer-events:auto !important}
+              #onScreenDebug .header{background:#1a1b1f;color:#f59e0b;padding:8px 12px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f59e0b;flex-wrap:wrap;gap:6px}
+              #onScreenDebug .header button{background:#f59e0b;color:#0a0b0d;border:0;padding:5px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;margin-left:4px}
+              #onScreenDebug .header button.freeze-btn{background:#ef4444;color:#fff}
+              #onScreenDebug .header button.freeze-btn.active{background:#10b981}
+              #onScreenDebug .logs{padding:8px;overflow-y:auto;flex:1;line-height:1.4;color:#e5e7eb}
+              #onScreenDebug .log-entry{margin:2px 0;padding:2px 4px;border-left:2px solid transparent;word-break:break-word}
+              #onScreenDebug .log-warn{border-left-color:#f59e0b;color:#fcd34d}
+              #onScreenDebug .log-error{border-left-color:#ef4444;color:#fca5a5}
+              #onScreenDebug .log-info{border-left-color:#3b82f6;color:#93c5fd}
+              #onScreenDebug .log-success{border-left-color:#10b981;color:#6ee7b7}
+              #onScreenDebug .timestamp{color:#6b7280;font-size:9px;margin-right:6px}
+              #onScreenDebug.frozen{border-color:#10b981}
+              #onScreenDebug.frozen .header{background:#10b981;color:#000}
+            </style>
+            <div class="header">
+              <span>🔍 Debug Console (recording all PIN logs)</span>
+              <div>
+                <button id="debugConsoleClear">Clear</button>
+                <button id="debugCopyBtn">Copy All</button>
+              </div>
+            </div>
+            <div class="logs" id="debugLogs"></div>
+          `;
+          document.body.appendChild(debugConsole);
+          
+          const logsContainer = document.getElementById('debugLogs');
+          
+          window.debugLog = function(level, ...args){
+            const time = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit',minute:'2-digit',second:'2-digit'}) + '.' + String(Date.now()%1000).padStart(3,'0');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${level}`;
+            const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a,null,2) : String(a)).join(' ');
+            entry.innerHTML = `<span class="timestamp">${time}</span>${msg}`;
+            logsContainer.appendChild(entry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+            // Keep max 300 entries
+            while(logsContainer.children.length > 300) logsContainer.removeChild(logsContainer.firstChild);
+          };
+          
+          document.getElementById('debugConsoleClear').onclick = ()=> {
+            logsContainer.innerHTML = '';
+            debugLog('info', '[Cleared]');
+          };
+          
+          document.getElementById('debugCopyBtn').onclick = ()=>{
+            const text = Array.from(logsContainer.children).map(el => el.textContent).join('\n');
+            navigator.clipboard.writeText(text).then(()=>{
+              const btn = document.getElementById('debugCopyBtn');
+              const orig = btn.textContent;
+              btn.textContent = 'Copied!';
+              setTimeout(()=> btn.textContent = orig, 1500);
+            }).catch(()=> alert('Copy failed. Select text manually.'));
+          };
+          
+          // Override console methods to capture
+          const originalWarn = console.warn;
+          console.warn = function(...args){
+            originalWarn.apply(console, args);
+            if(args[0] && args[0].includes('[PIN]')) debugLog('warn', ...args);
+          };
+          const originalLog = console.log;
+          console.log = function(...args){
+            originalLog.apply(console, args);
+            if(args[0] && args[0].includes('[PIN]')) debugLog('info', ...args);
+          };
+          const originalError = console.error;
+          console.error = function(...args){
+            originalError.apply(console, args);
+            if(args[0] && args[0].includes('[PIN]')) debugLog('error', ...args);
+          };
+          
+          debugLog('success', '[Debug Console] Ready - logs will persist for video capture');
+        }
+        
+        function showStripeCardForm() {
+          // Update modal title and show/hide quantity based on product type
+          const modalTitle = document.getElementById('stripe-modal-title');
+          const quantitySection = document.getElementById('quantity-section');
+          
+          if (ctx.kind === 'membership') {
+            if(ctx.membershipTier === 'gold'){
+              modalTitle.textContent = 'Purchase Gold Membership ($600)';
+            } else if(ctx.membershipTier === 'silver'){
+              modalTitle.textContent = 'Purchase Silver Membership ($196)';
+            } else {
+              modalTitle.textContent = 'Purchase Membership';
+            }
+            quantitySection.style.display = 'none';
+          } else {
+            modalTitle.textContent = 'Purchase Single Classes';
+            quantitySection.style.display = 'block';
+            classQuantity = 1; // Reset quantity
+            updateClassTotal();
+            
+            // Add quantity button handlers
+            document.getElementById('qty-minus').onclick = () => {
+              if(classQuantity > 1) {
+                classQuantity--;
+                updateClassTotal();
+              }
+            };
+            document.getElementById('qty-plus').onclick = () => {
+              if(classQuantity < 10) { // Max 10 classes
+                classQuantity++;
+                updateClassTotal();
+              }
+            };
+          }
+          
+          stripeOverlay.classList.add('open');
+          stripeOverlay.style.display = 'flex'; // keep for existing logic; class acts as semantic state
+        }
+        
+        function hideStripeCardForm() {
+          if(!window.__overlayShouldClose){
+            console.log('[PIN][Overlay] Blocked hideStripeCardForm - close not authorized');
+            return;
+          }
+          console.log('[PIN][Overlay] Closing overlay (authorized)');
+          stripeOverlay.classList.remove('open');
+          stripeOverlay.style.display = 'none';
+        }
+        
+        // Cancel button functionality
+  document.getElementById('stripe-cancel').onclick = () => { if(requestOverlayClose('user-cancel')) hideStripeCardForm(); };
+
+
+
+        // Stripe Elements - (old static init removed; using dynamic init below)
+        // const stripe = Stripe('pk_test_...');
+        // const elements = stripe.elements();
+        // const cardElement = elements.create('card', { /* ... */ });
+        // cardElement.mount('#card-element');
+
+        const paymentForm = document.getElementById('payment-form');
+        const cardError = document.getElementById('card-error');
+        const submitButton = document.getElementById('stripe-submit');
+        let currentProductType = '';
+        let clientSecret = '';
+
+        // Determine environment dynamically
+        const HOST = location.hostname;
+        const IS_LOCAL = HOST === 'localhost' || HOST === '127.0.0.1' || HOST === '0.0.0.0' || HOST === '::1';
+        const IS_TEST = HOST === 'test.tablet.msbdance.com';
+        const IS_PROD = HOST === 'tablet.msbdance.com';
+
+        // Allow manual override of Stripe mode (only on test/local) to point at live stack for exploratory testing
+        const RAW_SAVED_MODE = (!IS_PROD && localStorage.getItem('stripeMode')) || 'test';
+        const FORCED_STRIPE_MODE = (RAW_SAVED_MODE === 'live' ? 'live' : 'test');
+        const USING_LIVE = IS_PROD || FORCED_STRIPE_MODE === 'live';
+
+        // Backend target toggle (remote vs local) - only relevant on non-prod
+        const RAW_BACKEND_MODE = (!IS_PROD && localStorage.getItem('backendMode')) || 'remote';
+        const BACKEND_MODE = (RAW_BACKEND_MODE === 'local' ? 'local' : 'remote');
+        const LOCAL_BACKEND_URL = 'http://localhost:3000';
+        const REMOTE_TEST_URL = 'https://test-msbd-tablet-system-production.up.railway.app';
+  // Correct production backend domain (was missing leading 'prod-')
+  const REMOTE_PROD_URL = 'https://prod-msbd-tablet-system-production.up.railway.app';
+
+        // API base selection
+        let API_BASE;
+        if (BACKEND_MODE === 'local' && IS_LOCAL) {
+          API_BASE = LOCAL_BACKEND_URL; // force local only if truly on a local host
+        } else {
+          API_BASE = USING_LIVE ? REMOTE_PROD_URL : REMOTE_TEST_URL;
+        }
+
+        // Publishable key selection
+        const STRIPE_LIVE_KEY = (window.STRIPE_LIVE_PUBLISHABLE_KEY || 'pk_live_51LapNkD6NCrArHXBtnfJ2D86hnEKmWgz300JjIl2xklRzYnRlzpDtdXMLUoI24V4RaVkV5IW317IoQqvhUEmqhlR004hLXlB6Q');
+        const STRIPE_TEST_KEY = 'pk_test_51LapNkD6NCrArHXBoKFz9KVTLcNnx6pAcql7bs3YxK3qCXxVhtdBOzCupwMv1J5Io3oPwjqFUGPTJrxnWumumJww00eyBAuzLh';
+        const STRIPE_PUBLISHABLE_KEY = USING_LIVE ? STRIPE_LIVE_KEY : STRIPE_TEST_KEY;
+  // Debug instrumentation flag (?stripeDebug=1 or localStorage.setItem('stripeDebug','1'))
+  const STRIPE_DEBUG = (qs.get('stripeDebug') === '1') || (localStorage.getItem('stripeDebug') === '1');
+  if (STRIPE_DEBUG) console.warn('[StripeDebug] Enabled. Skipping Link suppression and enabling diagnostics overlay.');
+
+        // ---- Backend Availability Probe ----
+        (function probeBackend(){
+          // Only show warnings for non-production hosts where user might be confused by network errors
+            const bannerId = 'api-health-banner';
+            function showBanner(html){
+              if(document.getElementById(bannerId)) return;
+              const div = document.createElement('div');
+              div.id = bannerId;
+              div.innerHTML = `
+                <style>
+                  #${bannerId}{position:fixed;top:0;left:0;right:0;z-index:1600;font-family:Inter,system-ui,Arial;font-size:13px;}
+                  #${bannerId} .inner{background:#3f1d1d;color:#ffd4d4;padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;box-shadow:0 4px 18px -4px rgba(0,0,0,.5);}
+                  #${bannerId} button{background:#ffd4d4;color:#3f1d1d;border:0;padding:6px 10px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px;}
+                </style>
+                <div class="inner">${html}</div>`;
+              document.body.appendChild(div);
+            }
+            async function check(url){
+              const ctl = new AbortController();
+              const tid = setTimeout(()=>ctl.abort(), 4500);
+              try{
+                const r = await fetch(url+'/health',{signal:ctl.signal});
+                clearTimeout(tid);
+                if(!r.ok) return { ok:false, status:r.status };
+                const txt = await r.text();
+                return { ok: true, body: txt };
+              }catch(e){ return { ok:false, error:String(e) }; }
+            }
+            // Only probe after DOM ready minimal delay so body exists
+            setTimeout(async ()=>{
+              if(IS_PROD) return; // Do not clutter production tablet UI
+              const res = await check(API_BASE);
+              if(!res.ok){
+                if(USING_LIVE){
+                  showBanner(`Live backend <code>${API_BASE}</code> is unreachable (network / CORS / 404). Live mode cannot work locally until it responds. <button id="revertTestBtn">Switch back to TEST</button>`);
+                  const btn = document.getElementById('revertTestBtn');
+                  if(btn) btn.onclick=()=>{ localStorage.setItem('stripeMode','test'); location.reload(); };
+                }else{
+                  showBanner(`Test backend <code>${API_BASE}</code> is unreachable. Card form will fail. Please check server deployment.`);
+                }
+              }
+            }, 200);
+        })();
+
+        // Inject toggle UI (non-prod only)
+        (function injectStripeToggle(){
+          if(IS_PROD) return; // never show on production
+          const bar = document.createElement('div');
+          bar.id = 'stripe-mode-toggle';
+          bar.innerHTML = `
+            <style>
+              #stripe-mode-toggle{position:fixed;top:8px;right:8px;z-index:1500;font-family:Inter,system-ui,Arial}
+              #stripe-mode-toggle .sm-pill{display:flex;gap:6px;background:#141519;border:1px solid var(--border);padding:6px 10px;border-radius:999px;align-items:center;box-shadow:0 4px 18px -6px rgba(0,0,0,.6);flex-wrap:wrap;}
+              #stripe-mode-toggle button{background:#0f1012;border:1px solid var(--border);color:#cbd1d8;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-weight:600;letter-spacing:.5px;}
+              #stripe-mode-toggle button.active{background:linear-gradient(180deg,var(--gold1),var(--gold2));color:#1b1400;border-color:transparent;}
+              #stripe-mode-toggle .warn{color:#f59e0b;font-size:10px;font-weight:600;margin-left:4px;}
+              #stripe-mode-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--gold1);box-shadow:0 0 0 3px rgba(0,0,0,.4)}
+              #stripe-mode-toggle .group-label{font-size:10px;font-weight:700;opacity:.55;margin:0 2px 0 6px;}
+            </style>
+            <div class="sm-pill">
+              <div class="dot" title="Stripe mode status"></div>
+              <span style="font-size:11px;font-weight:700;opacity:.7;">Stripe</span>
+              <button data-mode="test">TEST</button>
+              <button data-mode="live">LIVE</button>
+              <span class="warn" id="stripeModeWarn" style="display:none;">LIVE!</span>
+              <span class="group-label">Backend</span>
+              <button data-backend="remote">REMOTE</button>
+              <button data-backend="local">LOCAL</button>
+            </div>`;
+          document.body.appendChild(bar);
+          const modeBtns = bar.querySelectorAll('button[data-mode]');
+          modeBtns.forEach(b=>{
+            if(b.getAttribute('data-mode')===FORCED_STRIPE_MODE) b.classList.add('active');
+            b.addEventListener('click',()=>{
+              const mode = b.getAttribute('data-mode');
+              if(mode==='live' && FORCED_STRIPE_MODE!=='live'){
+                const ok = confirm('Switch to LIVE Stripe? REAL charges will be created. Continue?');
+                if(!ok) return;
+              }
+              localStorage.setItem('stripeMode', mode);
+              location.reload();
+            });
+          });
+          const backendBtns = bar.querySelectorAll('button[data-backend]');
+          backendBtns.forEach(b=>{
+            if(b.getAttribute('data-backend')===BACKEND_MODE) b.classList.add('active');
+            b.addEventListener('click',()=>{
+              const tgt = b.getAttribute('data-backend');
+              if(tgt==='local' && !IS_LOCAL){
+                alert('Local backend only available when running on a localhost host.');
+                return;
+              }
+              localStorage.setItem('backendMode', tgt);
+              location.reload();
+            });
+          });
+          if(FORCED_STRIPE_MODE==='live') bar.querySelector('#stripeModeWarn').style.display='inline';
+        })();
+
+        // Re-init Stripe with dynamic key
+        const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+        console.log('[ENV] Host:', HOST, 'API_BASE:', API_BASE, 'Using key:', STRIPE_PUBLISHABLE_KEY.includes('live') ? 'LIVE' : 'TEST');
+
+        // API base URL - update this to your server URL
+        const DEV_MODE = false; // Set to false when server is running
+
+        // Get product type and pricing
+        function getProductInfo() {
+          const productType = ctx.kind || 'single';
+          let amount;
+          let membershipTier = ctx.membershipTier;
+          
+          if (productType === 'membership') {
+            if(membershipTier === 'gold'){
+              amount = 600.00; // Gold: $600 for 16 weeks, then $49/week
+            } else if(membershipTier === 'silver'){
+              amount = 196.00; // Silver: $196 for 4 weeks, then $42/week
+            } else {
+              amount = 600.00; // Default to Gold
+            }
+          } else {
+            amount = classQuantity * 20.00; // $20 per class
+          }
+          return { productType, amount, quantity: classQuantity, membershipTier };
+        }
+
+        // ================= PIN GATE (Backend Integration) =================
+        const PIN_SESSION_KEY = 'pin_session_token_v1';
+        function getSessionToken(){ return localStorage.getItem(PIN_SESSION_KEY)||''; }
+        function setSessionToken(t){ if(t) localStorage.setItem(PIN_SESSION_KEY,t); }
+        function clearSessionToken(){ localStorage.removeItem(PIN_SESSION_KEY); }
+        async function fetchJSON(url,opts){
+          const r = await fetch(url,{...opts, headers:{ 'Content-Type':'application/json', ...(opts&&opts.headers||{}) }});
+          const data = await r.json().catch(()=>({}));
+            return { ok:r.ok, status:r.status, data };
+        }
+        async function pinStatus(){
+          const body = { phone, email };
+          const token = getSessionToken();
+          const { ok, data } = await fetchJSON(`${API_BASE}/auth/pin-status`,{
+            method:'POST',
+            headers: token? { Authorization:`Bearer ${token}` } : {},
+            body: JSON.stringify(body)
+          });
+          if(window.__forcePinGate && data){
+            // Mask sessionActive so gate renders; we still retain token for subsequent actions post-unlock
+            data.sessionActive = false;
+            // Only force once per open cycle
+            window.__forcePinGate = false;
+          }
+          return data || {}; // {pinSet, sessionActive, attempts, attemptsRemaining, locked,...}
+        }
+        async function setPin(pin){
+          const { ok, status, data } = await fetchJSON(`${API_BASE}/auth/set-pin`,{
+            method:'POST',
+            body: JSON.stringify({ phone, email, pin })
+          });
+          if(ok && data.sessionToken){ setSessionToken(data.sessionToken); }
+          return { ok, status, data };
+        }
+        async function verifyPin(pin){
+          const { ok, status, data } = await fetchJSON(`${API_BASE}/auth/verify-pin`,{
+            method:'POST',
+            body: JSON.stringify({ phone, email, pin })
+          });
+          if(ok && data.sessionToken){ setSessionToken(data.sessionToken); }
+          return { ok, status, data };
+        }
+        async function resetLocalSession(){ clearSessionToken(); }
+        async function renderPinGate(){
+          const gate = document.getElementById('pin-gate'); if(!gate) return;
+          const savedSection = document.getElementById('saved-cards-section');
+          const savedCardsList = document.getElementById('saved-cards');
+          const status = await pinStatus();
+          if(status.sessionActive){
+            gate.style.display='none';
+            if(savedSection) savedSection.style.opacity='1';
+            if(savedCardsList) savedCardsList.style.visibility='visible';
+            loadSavedCards(); // Load cards if session is already active
+            return;
+          }
+            gate.style.display='block';
+            // Show the overall section (so gate is visible) but hide the actual cards list contents
+            if(savedSection) savedSection.style.opacity='1';
+            if(savedCardsList){
+              savedCardsList.style.visibility='hidden';
+              savedCardsList.innerHTML=''; // ensure no stale cards remain
+            }
+            if(status.locked){
+              gate.innerHTML = `<div style="color:#fca5a5;font-weight:700">PIN Locked (${status.lockedMinutesRemaining||'?'} min). Ask staff to reset.</div>`;
+              return;
+            }
+            if(!status.pinSet){
+              gate.innerHTML = `
+                <div style="font-weight:700;margin-bottom:8px;font-size:14px">Create a 4-6 digit PIN to access saved cards</div>
+                <form id="pinCreateForm" style="display:grid;gap:10px">
+                  <input id="pinNew1" type="password" pattern="\\d{4,6}" inputmode="numeric" autocomplete="new-password" placeholder="Enter PIN" required style="padding:10px;border:1px solid var(--border);border-radius:8px;background:#0c0d0f;color:#fff;font-size:16px;">
+                  <input id="pinNew2" type="password" pattern="\\d{4,6}" inputmode="numeric" autocomplete="new-password" placeholder="Confirm PIN" required style="padding:10px;border:1px solid var(--border);border-radius:8px;background:#0c0d0f;color:#fff;font-size:16px;">
+                  <button style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;height:54px;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Save PIN & Unlock</button>
+                  <div id="pinCreateMsg" style="color:#ff9aa1;font-size:12px;display:none"></div>
+                  ${SHOW_DEBUG ? `<button type="button" id="pinDiagBtn" style="margin-top:4px;padding:6px 10px;border:1px solid var(--border);background:#1d1f23;color:#cdd0d4;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600">Show Diagnostics</button>
+                  <pre id="pinDiagOut" style="display:none;margin:4px 0 0;font-size:10px;line-height:1.35;background:#0c0d0f;border:1px solid var(--border);padding:6px 8px;border-radius:6px;white-space:pre-wrap;max-height:140px;overflow:auto"></pre>` : ''}
+                </form>`;
+                const f = gate.querySelector('#pinCreateForm');
+                const diagBtn = gate.querySelector('#pinDiagBtn');
+                const diagOut = gate.querySelector('#pinDiagOut');
+                if(diagBtn){
+                  diagBtn.onclick = async ()=>{
+                    diagBtn.disabled=true; diagBtn.textContent='Diagnosing…';
+                    const info = { API_BASE };
+                    try{
+                      const st = await fetch(`${API_BASE}/auth/pin-status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,email})});
+                      info.pin_status_http = st.status;
+                      info.pin_status_body = await st.text();
+                    }catch(e){ info.pin_status_error = String(e); }
+                    try{
+                      // Intentionally call set-pin with bogus short pin to see route presence (should be 400 if exists)
+                      const sp = await fetch(`${API_BASE}/auth/set-pin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,email,pin:'123'})});
+                      info.set_pin_probe_http = sp.status; info.set_pin_probe_body = await sp.text();
+                    }catch(e){ info.set_pin_probe_error = String(e); }
+                    diagOut.textContent = JSON.stringify(info,null,2);
+                    diagOut.style.display='block';
+                    diagBtn.disabled=false; diagBtn.textContent='Show Diagnostics';
+                  };
+                }
+                f.onsubmit = async (e)=>{
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  const p1 = gate.querySelector('#pinNew1').value.trim();
+                  const p2 = gate.querySelector('#pinNew2').value.trim();
+                  const msg = gate.querySelector('#pinCreateMsg'); msg.style.display='none';
+                  if(p1!==p2){ msg.textContent='PINs do not match'; msg.style.display='block'; return; }
+                  if(!/^\d{4,6}$/.test(p1)){ msg.textContent='PIN must be 4-6 digits'; msg.style.display='block'; return; }
+                  const res = await setPin(p1);
+                  if(!res.ok){
+                    let m='Failed to set PIN';
+                    if(res.status===400 && res.data.error==='invalid_pin_format') m='PIN must be 4-6 digits';
+                    else if(res.status===409 && res.data.error==='already_set') m='PIN already set – use existing PIN';
+                    else if(res.status===409 && res.data.error==='constraint_conflict') m='PIN already exists for this phone/email';
+                    else if(res.data && res.data.detail) m = 'Error: '+res.data.detail;
+                    msg.innerHTML = m + `<br><span style="opacity:.7;font-size:11px">(status ${res.status}${res.data && res.data.error? ', code '+res.data.error:''})</span>`;
+                    msg.style.display='block';
+                    // Offer a debug fetch button (only shows once)
+                    if(!gate.querySelector('#pinDebugBtn')){
+                      const dbg = document.createElement('button');
+                      dbg.id='pinDebugBtn';
+                      dbg.textContent='Show PIN Debug';
+                      dbg.style.cssText='margin-top:6px;padding:6px 10px;border:1px solid var(--border);background:#1d1f23;color:#ddd;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600';
+                      gate.appendChild(dbg);
+                      dbg.onclick=async ()=>{
+                        dbg.disabled=true; dbg.textContent='Loading…';
+                        try{
+                          const r = await fetch(`${API_BASE}/auth/pin-debug`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ phone, email })});
+                          const d = await r.json().catch(()=>({}));
+                          const diag = document.createElement('div');
+                          diag.style.cssText='margin-top:6px;font-size:11px;line-height:1.35;background:#0f1012;border:1px solid var(--border);padding:6px 8px;border-radius:6px;color:#c9cacc;white-space:pre-wrap;';
+                          diag.textContent = 'Debug:\n'+JSON.stringify(d,null,2);
+                          gate.appendChild(diag);
+                        }catch(e){
+                          alert('Debug fetch failed');
+                        } finally { dbg.disabled=false; dbg.textContent='Show PIN Debug'; }
+                      };
+                    }
+                    return; }
+                  // Instead of hiding the entire gate abruptly (which collapses and forces user to re-open card form),
+                  // transition it out and immediately show saved cards for a smoother flow.
+                  if(savedSection) savedSection.style.opacity='1';
+                  if(savedCardsList) savedCardsList.style.visibility='visible';
+                  // Provide quick visual feedback of success
+                  if(savedSection) savedSection.style.opacity='1';
+                  if(savedCardsList) savedCardsList.style.visibility='visible';
+                  window.__pinJustUnlocked = Date.now();
+                  
+                  console.log('[PIN][CREATE] PIN created successfully, loading saved cards');
+                  
+                  gate.innerHTML = `<div style="font-weight:700;color:#b9f6ce;background:#1b2a19;border:1px solid #2a5a36;padding:12px;border-radius:10px;font-size:14px;">PIN created ✔ Loading your saved cards…</div>`;
+                  // Load cards, then fade the gate away
+                  loadSavedCards();
+                  setTimeout(()=>{
+                    gate.style.transition='opacity .35s ease, transform .35s ease';
+                    gate.style.opacity='0';
+                    gate.style.transform='translateY(-4px)';
+                    setTimeout(()=>{ gate.style.display='none'; }, 380);
+                  }, 350);
+                };
+            } else {
+              gate.innerHTML = `
+                <div style="font-weight:700;margin-bottom:4px;font-size:14px">Enter your PIN to view saved cards</div>
+                <div style="font-size:11px;opacity:.65;margin-bottom:6px">Attempts remaining: <span id="pinAttemptsRemain">${status.attemptsRemaining ?? '?'}</span></div>
+                <form id="pinVerifyForm" style="display:grid;gap:10px">
+                  <input id="pinEntry" type="password" pattern="\\d{4,6}" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN" required style="padding:10px;border:1px solid var(--border);border-radius:8px;background:#0c0d0f;color:#fff;font-size:20px;letter-spacing:6px;text-align:center;">
+                  <button style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;height:54px;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Unlock</button>
+                  <div id="pinVerifyMsg" style="color:#ff9aa1;font-size:12px;display:none"></div>
+                  <button type="button" id="forgotPinBtn" style="margin-top:8px;padding:10px;border:1px solid var(--border);background:#1d1f23;color:#cdd0d4;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500">Forgot PIN? (Staff Assistance)</button>
+                </form>`;
+                const f = gate.querySelector('#pinVerifyForm');
+                const attemptsRemainEl = gate.querySelector('#pinAttemptsRemain');
+                f.onsubmit= async (e)=>{
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  const val = gate.querySelector('#pinEntry').value.trim();
+                  const { ok, status:code, data } = await verifyPin(val);
+                  const msg = gate.querySelector('#pinVerifyMsg'); msg.style.display='none';
+                  if(!ok){
+                    if(code===401){
+                      attemptsRemainEl.textContent = data.attemptsRemaining ?? '0';
+                      msg.textContent = data.error==='locked' ? 'Locked – try later' : 'Incorrect PIN';
+                      msg.style.display='block';
+                      if(data.locked){ renderPinGate(); }
+                    } else if(code===423){
+                      msg.textContent='Locked – try later'; msg.style.display='block'; renderPinGate();
+                    } else if(code===429){
+                      msg.textContent=`Too many rapid attempts. Retry in ${data.retryAfterSeconds}s`; msg.style.display='block';
+                    } else {
+                      msg.textContent='Error verifying PIN'; msg.style.display='block';
+                    }
+                    return;
+                  }
+                  // Smooth success transition: keep context, show message, load cards
+                  if(savedSection) savedSection.style.opacity='1';
+                  if(savedCardsList) savedCardsList.style.visibility='visible';
+                  window.__pinJustUnlocked = Date.now();
+                  
+                  console.log('[PIN][VERIFY] PIN verified successfully, loading saved cards');
+                  
+                  // Block navigation for 5 seconds after PIN unlock (prevents dev server reload from closing overlay)
+                  // ONLY in DEV mode - production doesn't have hot-reload issues
+                  if(DEV){
+                    const unloadHandler = (e)=>{
+                      const elapsed = Date.now() - window.__pinJustUnlocked;
+                      if(elapsed < 5000){
+                        // Don't block if Add Card modal is open (allows Stripe Elements interaction)
+                        const addCardModal = document.getElementById('add-card-modal');
+                        if(addCardModal){
+                          console.log('[PIN] Allowing interaction - Add Card modal is open');
+                          return;
+                        }
+                        console.warn('[PIN] Blocked navigation ('+Math.round(elapsed)+'ms after unlock) - DEV mode only');
+                        e.preventDefault();
+                        e.returnValue = '';
+                        return '';
+                      } else {
+                        window.removeEventListener('beforeunload', unloadHandler, {capture: true});
+                      }
+                    };
+                    window.addEventListener('beforeunload', unloadHandler, {capture: true});
+                  }
+                  
+                  // Update gate message and load cards, then fade out
+                  setTimeout(()=>{
+                    gate.innerHTML = `<div style="font-weight:700;color:#b9f6ce;background:#1b2a19;border:1px solid #2a5a36;padding:12px;border-radius:10px;font-size:14px;">PIN verified ✔ Loading saved cards…</div>`;
+                    loadSavedCards();
+                    // Fade out the gate after cards start loading
+                    setTimeout(()=>{
+                      gate.style.transition='opacity .4s ease, transform .4s ease';
+                      gate.style.opacity='0';
+                      gate.style.transform='translateY(-6px)';
+                      setTimeout(()=>{ gate.style.display='none'; }, 420);
+                    }, 600);
+                  }, 0);
+                };
+                
+                // Forgot PIN button handler
+                const forgotBtn = gate.querySelector('#forgotPinBtn');
+                if(forgotBtn){
+                  forgotBtn.onclick = async ()=>{
+                    // Show admin PIN prompt
+                    gate.innerHTML = `
+                      <div style="font-weight:700;margin-bottom:12px;font-size:14px;color:#fca5a5">PIN Reset Required</div>
+                      <div style="font-size:12px;opacity:.75;margin-bottom:16px">Please ask a staff member to enter the admin PIN to reset your customer PIN.</div>
+                      <form id="adminResetForm" style="display:grid;gap:10px">
+                        <input id="adminPinEntry" type="password" inputmode="numeric" autocomplete="off" placeholder="Admin PIN" required style="padding:10px;border:1px solid var(--border);border-radius:8px;background:#0c0d0f;color:#fff;font-size:16px;letter-spacing:2px;text-align:center;">
+                        <button style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;height:54px;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Reset Customer PIN</button>
+                        <button type="button" id="cancelAdminReset" style="padding:10px;border:1px solid var(--border);background:#1d1f23;color:#cdd0d4;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
+                        <div id="adminResetMsg" style="color:#ff9aa1;font-size:12px;display:none"></div>
+                      </form>`;
+                    
+                    const adminForm = gate.querySelector('#adminResetForm');
+                    const adminMsg = gate.querySelector('#adminResetMsg');
+                    const cancelBtn = gate.querySelector('#cancelAdminReset');
+                    
+                    cancelBtn.onclick = ()=>{ renderPinGate(); };
+                    
+                    adminForm.onsubmit = async (e)=>{
+                      e.preventDefault();
+                      const adminKey = gate.querySelector('#adminPinEntry').value.trim();
+                      adminMsg.style.display='none';
+                      
+                      try {
+                        const response = await fetch(`${API_BASE}/auth/admin-reset-pin`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ phone, email, adminKey })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if(response.ok){
+                          // Success! Show confirmation and reload PIN gate
+                          gate.innerHTML = `
+                            <div style="font-weight:700;color:#b9f6ce;background:#1b2a19;border:1px solid #2a5a36;padding:16px;border-radius:10px;font-size:14px;text-align:center;margin-bottom:16px;">
+                              ✓ PIN Reset Successful
+                            </div>
+                            <div style="font-size:12px;opacity:.75;margin-bottom:16px;">The customer can now create a new PIN.</div>
+                            <button id="createNewPinBtn" style="background:#d4af37;color:#1a1d1f;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;width:100%;transition:all 0.2s;box-shadow:0 2px 8px rgba(212,175,55,0.3)">Create New PIN</button>
+                          `;
+                          
+                          const createBtn = gate.querySelector('#createNewPinBtn');
+                          createBtn.onclick = ()=>{ renderPinGate(); };
+                        } else {
+                          adminMsg.textContent = data.error || 'Failed to reset PIN';
+                          adminMsg.style.display='block';
+                        }
+                      } catch(err){
+                        console.error('[ADMIN RESET] Error:', err);
+                        adminMsg.textContent = 'Network error – check connection';
+                        adminMsg.style.display='block';
+                      }
+                    };
+                  };
+                }
+            }
+        }
+        window.__expirePinSession = function(){ clearSessionToken(); console.log('[PIN] Session cleared'); };
+        function ensurePinThen(action){ pinStatus().then(st=>{ if(st.sessionActive) action(); else { renderPinGate(); const gate=document.getElementById('pin-gate'); if(gate){ gate.animate([{transform:'scale(1)'},{transform:'scale(1.02)'},{transform:'scale(1)'}],{duration:320}); } } }); }
+
+        // Load saved cards
+        async function loadSavedCards() {
+          const savedCardsContainer = document.getElementById('saved-cards');
+          
+          // Show spinner while loading
+          savedCardsContainer.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;padding:24px;gap:12px;color:#9ca3af">
+              <div style="width:20px;height:20px;border:2px solid #374151;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+              <span style="font-size:14px">Loading saved cards...</span>
+            </div>
+            <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+          `;
+          
+          try {
+            let data;
+            
+            if (DEV_MODE) {
+              // Mock delay for spinner visibility
+              await new Promise(resolve => setTimeout(resolve, 500));
+              data = {
+                payment_methods: [
+                  { id: 'pm_mock_1', brand: 'visa', last4: '4242', exp_month: 4, exp_year: 2028 },
+                  { id: 'pm_mock_2', brand: 'mastercard', last4: '1234', exp_month: 12, exp_year: 2027 }
+                ]
+              };
+            } else {
+              const token = getSessionToken();
+              const response = await fetch(`${API_BASE}/get-payment-methods`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token? { Authorization:`Bearer ${token}` }: {}) },
+                body: JSON.stringify({ phone, email })
+              });
+              if(response.status === 401){
+                // session required – show gate
+                savedCardsContainer.innerHTML = '<p style="color:#9ca3af;text-align:center;font-size:13px;margin:0">PIN session required</p>';
+                renderPinGate();
+                return;
+              }
+              data = await response.json();
+            }
+            
+            // Clear spinner
+            savedCardsContainer.innerHTML = '';
+
+            if (data.payment_methods && data.payment_methods.length > 0) {
+              data.payment_methods.forEach((card, index) => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'kv card-enter';
+                cardDiv.style.cursor = 'default';
+                cardDiv.style.position='relative';
+                cardDiv.style.animationDelay = `${index * 80}ms`; // Stagger animation
+                const exp = `${String(card.exp_month).padStart(2,'0')}/${String(card.exp_year).slice(-2)}`;
+                cardDiv.innerHTML = `
+                  <div class="k">${card.brand.toUpperCase()} •••• ${card.last4}</div>
+                  <div class="v" style="font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+                    <span>Exp ${exp}</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                      <button data-act="use" data-id="${card.id}" class="card-use-btn" style="background:#1b2a19;color:#b9f6ce;border:1px solid #2a5a36;padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px">Use</button>
+                      <button data-act="del" data-id="${card.id}" style="background:#3a1616;color:#ffb4b4;border:1px solid #5a2a2a;padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px">Delete</button>
+                    </div>
+                  </div>`;
+                savedCardsContainer.appendChild(cardDiv);
+              });
+
+              // Add highlight animation CSS
+              if(!document.getElementById('card-animations')){
+                const style = document.createElement('style');
+                style.id = 'card-animations';
+                style.textContent = `
+                  @keyframes cardEnter {
+                    0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+                    100% { opacity: 1; transform: translateY(0) scale(1); }
+                  }
+                  @keyframes cardHighlight {
+                    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+                    50% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3); }
+                  }
+                  .card-enter {
+                    animation: cardEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                               cardHighlight 1.2s ease-out 0.4s;
+                  }
+                `;
+                document.head.appendChild(style);
+              }
+
+              // Delegate button actions
+              savedCardsContainer.querySelectorAll('button[data-act]')
+                .forEach(btn=> btn.onclick = (e)=>{
+                  const act = btn.getAttribute('data-act');
+                  const id = btn.getAttribute('data-id');
+                  const pm = { id };
+                  if(act==='use') useStoredCard(pm);
+                  else if(act==='del') confirmDeleteCard(pm, btn);
+                });
+              
+              // Auto-focus first Use button after animations
+              setTimeout(()=>{
+                const firstUseBtn = savedCardsContainer.querySelector('.card-use-btn');
+                if(firstUseBtn) {
+                  firstUseBtn.focus();
+                  console.log('[PIN] Auto-focused first card Use button');
+                }
+              }, 500);
+            } else {
+              savedCardsContainer.innerHTML = '<p style="color: #9ca3af; text-align: center;">No saved cards</p>';
+            }
+          } catch (error) {
+            console.error('Error loading saved cards:', error);
+            savedCardsContainer.innerHTML = '<p style="color: #ff6b6b; text-align: center;">Error loading cards</p>';
+          }
+        }
+
+        async function confirmDeleteCard(card, btn){
+          if(!getSessionToken()){ renderPinGate(); return; }
+          
+          // Check if this is the last card
+          const cardCount = document.querySelectorAll('#saved-cards .kv').length;
+          if(cardCount <= 1){
+            // Shake animation and error message
+            const savedCardsContainer = document.getElementById('saved-cards');
+            savedCardsContainer.style.animation = 'shake 0.5s ease-in-out';
+            
+            // Show error message
+            const errorMsg = document.createElement('div');
+            errorMsg.style.cssText = 'background:#3a1616;color:#ffb4b4;border:1px solid #5a2a2a;padding:12px;border-radius:8px;margin-top:12px;text-align:center;font-size:13px;animation:fadeIn 0.3s ease-out';
+            errorMsg.textContent = 'You must have at least one active card on file';
+            savedCardsContainer.appendChild(errorMsg);
+            
+            // Add shake keyframes if not already added
+            if(!document.getElementById('shake-animation')){
+              const style = document.createElement('style');
+              style.id = 'shake-animation';
+              style.textContent = `
+                @keyframes shake {
+                  0%, 100% { transform: translateX(0); }
+                  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+                  20%, 40%, 60%, 80% { transform: translateX(8px); }
+                }
+                @keyframes fadeIn {
+                  from { opacity: 0; transform: translateY(-8px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `;
+              document.head.appendChild(style);
+            }
+            
+            // Remove error message and animation after 3 seconds
+            setTimeout(()=>{
+              savedCardsContainer.style.animation = '';
+              if(errorMsg.parentNode) errorMsg.remove();
+            }, 3000);
+            
+            return;
+          }
+          
+          const ok = confirm('Delete this saved card?');
+          if(!ok) return;
+          
+          // Show loading state
+          btn.textContent = 'Deleting...';
+          btn.disabled = true;
+          
+          try {
+            const token = getSessionToken();
+            const response = await fetch(`${API_BASE}/delete-payment-method`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+              },
+              body: JSON.stringify({ 
+                phone, 
+                email,
+                payment_method_id: card.id 
+              })
+            });
+            
+            const data = await response.json();
+            
+            if(response.ok){
+              console.log('[DELETE] Card deleted successfully');
+              // Remove card from UI with fade out
+              const kv = btn.closest('.kv');
+              if(kv) {
+                kv.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                kv.style.opacity = '0';
+                kv.style.transform = 'translateX(20px)';
+                setTimeout(()=> kv.remove(), 300);
+              }
+            } else if(response.status === 401){
+              console.log('[DELETE] PIN session expired, showing gate');
+              renderPinGate();
+            } else {
+              throw new Error(data.message || 'Failed to delete card');
+            }
+          } catch(error){
+            console.error('[DELETE] Error:', error);
+            alert('Failed to delete card: ' + error.message);
+            btn.textContent = 'Delete';
+            btn.disabled = false;
+          }
+        }
+
+        // Use stored card for payment
+        async function useStoredCard(card) {
+          try {
+            submitButton.textContent = 'Processing...';
+            submitButton.disabled = true;
+            
+            const { productType, amount } = getProductInfo();
+            
+            const token = getSessionToken();
+            const response = await fetch(`${API_BASE}/create-payment-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...(token? { Authorization:`Bearer ${token}` }: {}) },
+              body: JSON.stringify({ phone, name, email, amount, product_type: productType, payment_method_id: card.id })
+            });
+            if(response.status === 401){
+              cardError.textContent = 'PIN session expired – re-enter your PIN';
+              cardError.style.display='block';
+              clearSessionToken();
+              renderPinGate();
+              submitButton.textContent = 'Confirm Purchase';
+              submitButton.disabled = false;
+              return;
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            
+            handlePaymentResult(data);
+          } catch (error) {
+            cardError.textContent = error.message;
+            cardError.style.display = 'block';
+            submitButton.textContent = 'Confirm Purchase';
+            submitButton.disabled = false;
+          }
+        }
+
+        // Handle payment result
+        async function handlePaymentResult(data) {
+          if (data.status === 'succeeded') {
+            await revokePinSession();
+            showPaymentSuccess();
+          } else if (data.status === 'requires_action') {
+            stripe.confirmCardPayment(data.client_secret).then(function(result) {
+              if (result.error) {
+                cardError.textContent = result.error.message;
+                cardError.style.display = 'block';
+              } else {
+                handlePaymentResult({status: 'succeeded'});
+              }
+            });
+          } else {
+            throw new Error('Payment failed');
+          }
+        }
+        
+        // Show elegant payment success animation
+        function showPaymentSuccess() {
+          if(requestOverlayClose('payment-success')) hideStripeCardForm();
+          
+          // Show custom success modal with registration instructions
+          const { amount } = getProductInfo();
+          const modal = document.createElement('div');
+          modal.id = 'payment-success-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);text-align:center">
+              <div style="width:80px;height:80px;margin:0 auto 20px;background:#1b2a19;border-radius:50%;display:flex;align-items:center;justify-content:center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#b9f6ce" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <h3 style="color:#b9f6ce;margin:0 0 8px;font-size:28px;font-weight:700">Payment Complete!</h3>
+              <div style="color:#f3f4f6;font-size:24px;font-weight:600;margin-bottom:24px">$${amount.toFixed(2)}</div>
+              <div style="background:#0f1012;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px">
+                <p style="color:#cdd0d4;margin:0;font-size:16px;line-height:1.6">
+                  Please head to registration to finish check-in.<br>
+                  <span style="color:#9ca3af;font-size:14px">Just give them your name and you're good to go!</span>
+                </p>
+              </div>
+              <button id="successOk" style="width:100%;background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px">OK</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          // Confetti celebration
+          try{confetti({particleCount:120,spread:70,origin:{y:.6}});}catch(_){}
+          
+          $("#successOk").onclick = () => {
+            modal.remove();
+            location.href = SETTINGS.HOME_URL;
+          };
+        }
+
+        // Form submission for new cards
+        paymentForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          cardError.style.display = 'none';
+          submitButton.textContent = 'Processing...';
+          submitButton.disabled = true;
+          
+          try {
+            if (DEV_MODE) {
+              // Mock successful payment for development
+              setTimeout(() => {
+                showPaymentSuccess();
+                submitButton.textContent = 'Confirm Purchase';
+                submitButton.disabled = false;
+              }, 2000);
+              return;
+            }
+            // First create setup intent to save the card
+            const setupResponse = await fetch(`${API_BASE}/create-setup-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone, name, email })
+            });
+            
+            const setupData = await setupResponse.json();
+            if (setupData.error) throw new Error(setupData.error);
+            
+            // Confirm the setup intent to save the card
+            const { setupIntent, error: setupError } = await stripe.confirmCardSetup(
+              setupData.client_secret,
+              {
+                payment_method: {
+                  card: cardElement,
+                  billing_details: { name }
+                }
+              }
+            );
+            
+            if (setupError) {
+              throw new Error(setupError.message);
+            }
+            
+            // Now create payment intent with the NEW card (don't send payment_method_id to avoid PIN check)
+            const { productType, amount } = getProductInfo();
+            
+            const paymentResponse = await fetch(`${API_BASE}/create-payment-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phone,
+                name,
+                email,
+                amount,
+                product_type: productType,
+                // Don't send payment_method_id for new cards - attach it client-side
+                new_payment_method: setupIntent.payment_method
+              })
+            });
+            
+            const paymentData = await paymentResponse.json();
+            if (paymentData.error) throw new Error(paymentData.error);
+            
+            handlePaymentResult(paymentData);
+            
+          } catch (error) {
+            cardError.textContent = error.message;
+            cardError.style.display = 'block';
+            submitButton.textContent = 'Confirm Purchase';
+            submitButton.disabled = false;
+          }
+        });
+
+        // Update showStripeCardForm to defer loading cards until PIN session active
+        const originalShowStripeCardForm = showStripeCardForm;
+        let FORCE_GATE_EACH_OPEN = true; // toggle if you want to reuse session inside same visit
+        showStripeCardForm = function() {
+          resetOverlayCloseIntent(); // clear previous close state when opening
+          originalShowStripeCardForm();
+          
+          // NEW FLOW: Top section (new card) = NO PIN required
+          // Bottom section (saved cards) = PIN required
+          const savedSection = document.getElementById('saved-cards-section');
+          const savedCardsList = document.getElementById('saved-cards');
+          
+          // Show saved cards section (with PIN gate)
+          if(savedSection) savedSection.style.opacity='1';
+          if(savedCardsList){ 
+            savedCardsList.style.visibility='hidden'; 
+            savedCardsList.innerHTML=''; 
+          }
+          
+          // Force PIN gate for saved cards section only
+          window.__forcePinGate = FORCE_GATE_EACH_OPEN;
+          renderPinGate();
+        };
+
+        // Add Card button handler
+        document.getElementById('add-card-btn').onclick = async function(){
+          if(!getSessionToken()){ renderPinGate(); return; }
+          
+          const btn = this;
+          btn.disabled = true;
+          const originalText = btn.innerHTML;
+          btn.innerHTML = `<div style="width:14px;height:14px;border:2px solid #2a5a36;border-top-color:#b9f6ce;border-radius:50%;animation:spin 0.6s linear infinite"></div>`;
+          
+          try {
+            // Create setup intent for adding new card
+            const token = getSessionToken();
+            const response = await fetch(`${API_BASE}/create-setup-intent`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+              },
+              body: JSON.stringify({ phone, email })
+            });
+            
+            if(response.status === 401){
+              renderPinGate();
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+              return;
+            }
+            
+            const data = await response.json();
+            
+            // Show a modal for card entry
+            showAddCardModal(data.client_secret, token);
+            
+          } catch(error){
+            console.error('[ADD CARD] Error:', error);
+            alert('Failed to start card addition: ' + error.message);
+          } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }
+        };
+        
+        function showAddCardModal(setupIntentSecret, token){
+          // Create modal overlay
+          const modal = document.createElement('div');
+          modal.id = 'add-card-modal';
+          modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease-out';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border:1px solid var(--border);border-radius:16px;width:90%;max-width:450px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:22px">Add Payment Method</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px">A $20 test charge will be made and immediately refunded to verify your card.</p>
+              
+              <div id="add-card-element" style="background:#0f1012;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px"></div>
+              <div id="add-card-error" style="color:#ff6b6b;font-size:13px;margin-bottom:12px;min-height:20px"></div>
+              
+              <div style="display:flex;gap:12px">
+                <button id="add-card-cancel" type="button" style="flex:1;background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:12px;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px">Cancel</button>
+                <button id="add-card-submit" type="button" style="flex:1;background:#1b2a19;color:#b9f6ce;border:1px solid #2a5a36;padding:12px;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px">Add & Verify Card</button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          // Initialize Stripe Elements for new card
+          const addCardStripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+          const addCardElements = addCardStripe.elements();
+          const addCardElement = addCardElements.create('card', {
+            style: {
+              base: { 
+                color: '#f3f4f6', 
+                fontSize: '15px', 
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                '::placeholder': { color: '#6b7280' }
+              }
+            }
+          });
+          addCardElement.mount('#add-card-element');
+          
+          const addCardError = document.getElementById('add-card-error');
+          const addCardSubmit = document.getElementById('add-card-submit');
+          const addCardCancel = document.getElementById('add-card-cancel');
+          
+          // Handle card validation errors
+          addCardElement.on('change', (event) => {
+            if (event.error) {
+              addCardError.textContent = event.error.message;
+            } else {
+              addCardError.textContent = '';
+            }
+          });
+          
+          // Cancel button
+          addCardCancel.onclick = () => {
+            modal.remove();
+          };
+          
+          // Submit button - confirm card and trigger test transaction
+          addCardSubmit.onclick = async () => {
+            addCardSubmit.disabled = true;
+            addCardSubmit.textContent = 'Processing...';
+            addCardError.textContent = '';
+            
+            try {
+              // Confirm setup intent to get payment method
+              const { setupIntent, error: confirmError } = await addCardStripe.confirmCardSetup(
+                setupIntentSecret,
+                {
+                  payment_method: {
+                    card: addCardElement,
+                    billing_details: {
+                      name: name || 'Dance Student',
+                      email: email || undefined,
+                      phone: phone || undefined
+                    }
+                  }
+                }
+              );
+              
+              if (confirmError) {
+                throw new Error(confirmError.message);
+              }
+              
+              console.log('[ADD CARD] Setup intent confirmed:', setupIntent.id);
+              addCardSubmit.textContent = 'Verifying card...';
+              
+              // Now send to backend for $20 test transaction
+              const verifyResponse = await fetch(`${API_BASE}/add-payment-method`, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ 
+                  phone, 
+                  email,
+                  name,
+                  payment_method_id: setupIntent.payment_method
+                })
+              });
+              
+              const verifyData = await verifyResponse.json();
+              
+              if(verifyResponse.ok){
+                console.log('[ADD CARD] Card verified successfully');
+                modal.remove();
+                
+                // Show success message
+                const successMsg = document.createElement('div');
+                successMsg.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1b2a19;color:#b9f6ce;border:1px solid #2a5a36;padding:16px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:10001;box-shadow:0 10px 40px rgba(0,0,0,0.4);animation:slideDown 0.4s ease-out';
+                successMsg.textContent = '✓ Card added and verified! $20 test charge refunded.';
+                document.body.appendChild(successMsg);
+                
+                // Add animation
+                if(!document.getElementById('slideDown-animation')){
+                  const style = document.createElement('style');
+                  style.id = 'slideDown-animation';
+                  style.textContent = '@keyframes slideDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }';
+                  document.head.appendChild(style);
+                }
+                
+                setTimeout(()=> successMsg.remove(), 4000);
+                
+                // Reload cards
+                loadSavedCards();
+              } else if(verifyResponse.status === 401){
+                modal.remove();
+                renderPinGate();
+              } else {
+                throw new Error(verifyData.message || 'Card verification failed');
+              }
+            } catch(error){
+              console.error('[ADD CARD] Error:', error);
+              addCardError.textContent = error.message;
+              addCardSubmit.textContent = 'Add & Verify Card';
+              addCardSubmit.disabled = false;
+            }
+          };
+        }
+
+        async function revokePinSession(){
+          const token = getSessionToken();
+          if(!token) return;
+          try{ await fetch(`${API_BASE}/auth/revoke-session`,{method:'POST', headers:{ Authorization:`Bearer ${token}` }}); }catch(_){ }
+          clearSessionToken();
+        }
+
+        // Revoke on modal cancel/close/back interactions
+        const originalHideStripeCardForm = hideStripeCardForm;
+        hideStripeCardForm = function(){
+          if(!window.__overlayShouldClose){
+            console.log('[PIN][Overlay] Prevented unintended close (overlayShouldClose=false)');
+            return; // ignore spurious calls
+          }
+          revokePinSession();
+          originalHideStripeCardForm();
+        };
+
+        // Also revoke if user navigates away via back button in pay pane
+        const payBackBtnObserver = new MutationObserver(()=>{
+          const b = document.getElementById('payBack');
+          if(b && !b.__pinRevoke){
+            b.__pinRevoke = true;
+            b.addEventListener('click', ()=>{ revokePinSession(); });
+          }
+        });
+        payBackBtnObserver.observe(document.body,{childList:true,subtree:true});
+
+        // Stripe Elements initialization
+        const elements = stripe.elements();
+        const cardElement = elements.create('card', {
+          // Removed disableLink (undocumented for standalone card) to avoid live-mode structure side effects
+          style: {
+            base: {
+              color: '#f3f4f6',
+              fontFamily: 'Inter, system-ui, Arial',
+              fontSize: '16px',
+              '::placeholder': { color: '#9ca3af' }
+            }
+          }
+        });
+
+        // NOTE: Link suppression temporarily disabled per request; allowing native Stripe Link UI to render.
+        // To re-enable previous suppression logic, restore the removed IIFE here.
+        cardElement.mount('#card-element');
+        cardElement.on('ready', () => {
+          try {
+            console.log('[Stripe] Card element ready. Live mode:', USING_LIVE);
+            // Ensure iframe really can receive input
+            const iframe = document.querySelector('#card-element iframe');
+            if(iframe){
+              iframe.style.pointerEvents = 'auto';
+              const cs = getComputedStyle(iframe);
+              console.log('[Stripe][IframeStyles]', { pointerEvents: cs.pointerEvents, opacity: cs.opacity, zIndex: cs.zIndex });
+            }
+          } catch(e) { console.warn('Post-mount adjust error', e); }
+          if (STRIPE_DEBUG) initStripeDebug();
+        });
+
+        // ===== Overlay Close Instrumentation (diagnose unexpected closure) =====
+        (function instrumentOverlayClose(){
+          const overlay = document.getElementById('stripeOverlay');
+          if(!overlay) return;
+          window.__pinOverlayDebug = window.__pinOverlayDebug || { events:[] };
+          function log(evt,msg,extra){
+            const entry = { t:Date.now(), evt, msg, extra: extra||null };
+            window.__pinOverlayDebug.events.push(entry);
+            if(window.__pinOverlayDebug.events.length>300){ window.__pinOverlayDebug.events.shift(); }
+            console.log('[PIN][Overlay][DBG]', evt, msg, extra||'');
+          }
+          window.__pinOverlayExpectedVisible = true;
+          // Monkey patch style.display changes
+          const dispDesc = Object.getOwnPropertyDescriptor(overlay.style.__proto__, 'display');
+          if(dispDesc && !overlay.__patchedDisplay){
+            Object.defineProperty(overlay.style,'display',{
+              set(v){
+                const prev = overlay.getAttribute('data-prev-display')||'';
+                overlay.setAttribute('data-prev-display', v);
+                log('display-set', `display: ${prev} -> ${v}`, (new Error()).stack.split('\n').slice(1,6));
+                dispDesc.set.call(this,v);
+                // Auto-restore if within 1800ms after unlock
+                if(v==='none' && window.__pinJustUnlocked && (Date.now() - window.__pinJustUnlocked) < 1800){
+                  log('auto-restore','Overlay hidden unexpectedly; restoring');
+                  setTimeout(()=>{ overlay.style.display='flex'; }, 10);
+                }
+              },
+              get(){ return dispDesc.get.call(this); }
+            });
+            overlay.__patchedDisplay = true;
+          }
+          // Mutation observer for attribute/style changes
+            const mo = new MutationObserver(muts=>{
+              muts.forEach(m=>{
+                if(m.type==='attributes' && m.attributeName==='style'){
+                  log('mut','style attr changed');
+                }
+              });
+            });
+          mo.observe(overlay,{ attributes:true, attributeFilter:['style'] });
+          // Observe body for overlay removal
+          const bodyObs = new MutationObserver(muts=>{
+            const present = document.getElementById('stripeOverlay');
+            if(!present && window.__pinOverlayExpectedVisible){
+              log('removed','Overlay node removed from DOM, recreating stub');
+              // Attempt lightweight restore
+              const stub = document.createElement('div');
+              stub.id='stripeOverlay';
+              stub.style.cssText='position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,Arial;color:#fff';
+              stub.innerHTML='<div style="padding:20px;border:1px solid #444;border-radius:12px;background:#141519">[Auto-Restore] Overlay unexpectedly removed. Check console logs.</div>';
+              document.body.appendChild(stub);
+            }
+          });
+          bodyObs.observe(document.body,{childList:true,subtree:true});
+          // Watchdog interval
+          setInterval(()=>{
+            const ov = document.getElementById('stripeOverlay');
+            if(!ov) return; // removal handled above
+            if(window.__pinJustUnlocked && (Date.now()-window.__pinJustUnlocked)<1800){
+              if(ov.style.display==='none'){
+                log('watchdog','Display became none during grace; forcing flex');
+                ov.style.display='flex';
+              }
+            }
+          },250);
+          // Expose helper
+          window.dumpOverlayDebug = function(){ return window.__pinOverlayDebug.events.slice(-50); };
+          log('init','Overlay instrumentation active');
+        })();
+
+        // ===== Debug Instrumentation (Option 2) =====
+        function initStripeDebug(){
+          const cardHost = document.getElementById('card-element');
+          if(!cardHost){ console.warn('[StripeDebug] #card-element not found.'); return; }
+          // Panel
+          const panel = document.createElement('div');
+          panel.id='stripe-debug-panel';
+          panel.innerHTML = `
+            <style>
+              #stripe-debug-panel{position:fixed;bottom:8px;left:8px;background:#141519;z-index:2000;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-family:Inter,system-ui,Arial;font-size:11px;line-height:1.35;max-width:280px;color:#cbd1d8;box-shadow:0 6px 20px -4px rgba(0,0,0,.6)}
+              #stripe-debug-panel h5{margin:0 0 6px;font-size:12px;font-weight:800;color:#f3f4f6}
+              #stripe-debug-panel button{background:#0f1012;border:1px solid var(--border);color:#e5e7eb;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;margin:4px 4px 0 0}
+              #stripe-debug-panel .row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+              #stripe-debug-focus-ring{position:fixed;pointer-events:none;border:2px solid #f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.35);z-index:1999;transition:all .15s ease;}
+              #stripe-debug-ray{position:fixed;width:1px;background:rgba(245,158,11,.65);z-index:1998;pointer-events:none}
+              #stripe-debug-log{max-height:120px;overflow:auto;background:#0f1012;border:1px solid rgba(255,255,255,.08);padding:4px 6px;border-radius:6px;margin-top:6px;font-family:ui-monospace,monospace;font-size:10px;white-space:pre-wrap;}
+            </style>
+            <h5>Stripe Debug</h5>
+            <div><strong>Mode:</strong> ${USING_LIVE? 'LIVE' : 'TEST'} | <strong>Host:</strong> ${HOST}</div>
+            <div><strong>Key:</strong> ${STRIPE_PUBLISHABLE_KEY.slice(0,10)}…</div>
+            <div class="row">
+              <button id="dbgToggleOverlay">Hide Overlay</button>
+              <button id="dbgElements">ElementsAtCenter</button>
+              <button id="dbgPersist">Persist=Off</button>
+              <button id="dbgDisable">Disable Debug</button>
+            </div>
+            <div id="stripe-debug-log"></div>
+            <div style="margin-top:4px;opacity:.65">Shortcuts: Alt+Shift+D (toggle overlay) • Alt+Shift+L (Link suppress) </div>
+          `;
+          document.body.appendChild(panel);
+          const logBox = panel.querySelector('#stripe-debug-log');
+          function log(msg,obj){
+            const time = new Date().toLocaleTimeString();
+            logBox.textContent = `[${time}] ${msg}\n` + logBox.textContent.slice(0,6000);
+            if(obj) console.debug('[StripeDebug]', msg, obj);
+          }
+          // Focus ring overlay
+          const ring = document.createElement('div');
+            ring.id='stripe-debug-focus-ring';
+          document.body.appendChild(ring);
+          const ray = document.createElement('div'); ray.id='stripe-debug-ray'; document.body.appendChild(ray);
+          let overlayVisible = true;
+          function positionRing(){
+            const ifr = cardHost.querySelector('iframe');
+            if(!ifr){ ring.style.display='none'; return; }
+            const r = ifr.getBoundingClientRect();
+            ring.style.display='block';
+            ring.style.left = r.left+'px';
+            ring.style.top = r.top+'px';
+            ring.style.width = r.width+'px';
+            ring.style.height = r.height+'px';
+            // Ray through center
+            const cx = r.left + r.width/2;
+            ray.style.left = cx+'px';
+            ray.style.top = r.top+'px';
+            ray.style.height = r.height+'px';
+          }
+          positionRing();
+          window.addEventListener('resize', positionRing);
+          const persistBtn = panel.querySelector('#dbgPersist');
+          let persist = false;
+          function elementsAtCenter(){
+            const ifr = cardHost.querySelector('iframe');
+            if(!ifr){ log('No iframe yet'); return; }
+            const r = ifr.getBoundingClientRect();
+            const x = r.left + r.width/2;
+            const y = r.top + r.height/2;
+            const els = document.elementsFromPoint(x,y).map(e=>e.tagName+(e.id?('#'+e.id):'')+(e.className?('.'+String(e.className).split(/\s+/).join('.')):''));
+            log('elementsFromPoint center => '+els.join(' -> '));
+          }
+          // Buttons
+          panel.querySelector('#dbgToggleOverlay').onclick=()=>{
+            overlayVisible=!overlayVisible;
+            ring.style.display = overlayVisible?'block':'none';
+            ray.style.display = overlayVisible?'block':'none';
+            panel.querySelector('#dbgToggleOverlay').textContent = overlayVisible?'Hide Overlay':'Show Overlay';
+            log('Overlay '+(overlayVisible?'shown':'hidden'));
+          };
+          panel.querySelector('#dbgElements').onclick=elementsAtCenter;
+          persistBtn.onclick=()=>{ persist=!persist; persistBtn.textContent = 'Persist='+(persist?'On':'Off'); log('Persist '+(persist?'ENABLED':'disabled')); };
+          panel.querySelector('#dbgDisable').onclick=()=>{ localStorage.removeItem('stripeDebug'); location.reload(); };
+          // Auto persist logging (every 2s) if enabled
+          setInterval(()=>{ if(persist) elementsAtCenter(); },2000);
+          // Shortcut Alt+Shift+D
+          window.addEventListener('keydown',e=>{ if(e.altKey && e.shiftKey && e.code==='KeyD'){ panel.querySelector('#dbgToggleOverlay').click(); }});
+          // Observe pointer-events / overlay blockers
+          const obs = new MutationObserver(()=>{ elementsAtCenter(); });
+          obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['style','class']});
+          // Expose debug API
+          window.__stripeDebug = { elementsAtCenter, log, panel };
+          log('Debug panel initialized.');
+          // If Link suppression was previously installed (should not in debug), note status
+          log('Link suppression active? '+(window.__linkSuppressEnabled?'YES':'NO'));
+        }
+        // Provide a way to enable debug on the fly (console helper)
+        window.enableStripeDebug = function(){ localStorage.setItem('stripeDebug','1'); location.reload(); };
+        window.disableStripeDebug = function(){ localStorage.removeItem('stripeDebug'); location.reload(); };
+      }
+
+      renderMain();
+    })();
+  </script>
+
+  <!-- Version Info Constants -->
+  <script>
+    // Dynamic version info (fallback values)
+    let VERSION = "v2.6.0";
+    let BUILD_DATE = "2025-10-06";
+    let BUILD_INFO = "Membership tiers + UI redesign";
+    const ADMIN_PIN = "2468";
+    fetch('version.json',{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(v=>{ if(!v) return; VERSION='v'+v.version; BUILD_DATE=(v.buildDate||'').slice(0,10); BUILD_INFO=v.notes||BUILD_INFO; const vd=document.getElementById('versionDisplay'); if(vd) vd.textContent=VERSION; })
+      .catch(()=>{});
+  </script>
+
+  <!-- Admin Panel HTML -->
+  <button id="adminFab" title="Admin" style="position:fixed;right:16px;bottom:16px;width:56px;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:#0f0f10;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.6)">⚙️</button>
+
+  <div id="adminModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:10000;align-items:center;justify-content:center">
+    <div id="adminPanel" style="background:linear-gradient(180deg,#17181c,#101113);color:#eee;border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:18px;width:min(320px,85vw);max-height:70vh;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,.8)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0;font-size:20px;font-weight:800;color:#f3f4f6;">Payment System Admin</h3>
+      </div>
+      <p style="margin:6px 0 8px;opacity:.8;font-size:14px;color:#c9cacc">Enter PIN to view system info.</p>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0">
+        <input id="adminPin" type="password" placeholder="PIN" style="padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#0f1012;color:#fff;flex:1;min-width:100px">
+        <button id="adminUnlock" style="padding:10px 16px;border:1px solid #4ade80;border-radius:8px;background:#166534;color:#bbf7d0;cursor:pointer">Unlock</button>
+        <span id="pinMsg" style="color:#ff9aa1;display:none;font-size:12px">Wrong PIN</span>
+        <button id="adminClose" style="padding:10px 16px;border:1px solid #ef4444;border-radius:8px;background:#991b1b;color:#fecaca;cursor:pointer;margin-left:auto">Close</button>
+      </div>
+
+      <div id="adminBody" style="display:none">
+        <!-- Version Info Section -->
+        <div style="border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;margin-top:12px">
+          <h4 style="margin:4px 0 6px;color:#eee">System Info</h4>
+          <div style="font-size:12px;color:#c9cacc;line-height:1.4">
+            <div><strong>Version:</strong> <span id="versionDisplay">v2.6.0</span></div>
+            <div><strong>Environment:</strong> <span id="environmentDisplay">Loading...</span></div>
+            <div><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">Jan 2025</span></div>
+            <div><strong>Page:</strong> Payment Options</div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)">
+              <strong>Latest Change:</strong>
+              <div id="latestCommit" style="margin-top:4px;padding:8px;background:rgba(0,0,0,.3);border-radius:6px;font-size:11px;color:#9ca3af;line-height:1.5;font-family:monospace">Loading...</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;text-align:center">
+            <button id="debugToggle" style="padding:8px 16px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600">Debug: <span id="debugStatus">OFF</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Panel JavaScript -->
+  <script>
+    (function() {
+      const adminFab = document.getElementById('adminFab');
+      const adminModal = document.getElementById('adminModal');
+      const adminClose = document.getElementById('adminClose');
+      const adminPin = document.getElementById('adminPin');
+      const adminUnlock = document.getElementById('adminUnlock');
+      const pinMsg = document.getElementById('pinMsg');
+      const adminBody = document.getElementById('adminBody');
+
+      function $admin(id) { return document.getElementById(id); }
+
+      adminFab.onclick = () => {
+        adminModal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+        pinMsg.style.display = "none";
+        adminBody.style.display = "none";
+        adminPin.value = "";
+        adminPin.focus();
+      };
+
+      adminClose.onclick = () => {
+        adminModal.style.display = "none";
+        document.body.style.overflow = "";
+      };
+
+      adminUnlock.onclick = () => {
+        if (adminPin.value === ADMIN_PIN) {
+          pinMsg.style.display = "none";
+          adminBody.style.display = "block";
+          updateVersionDisplay();
+        } else {
+          pinMsg.style.display = "inline";
+          adminBody.style.display = "none";
+        }
+      };
+
+      function updateVersionDisplay() {
+        $admin("versionDisplay").textContent = VERSION;
+        $admin("lastUpdatedDisplay").textContent = BUILD_DATE;
+        
+        // Detect environment
+        let env = "Unknown";
+        if (DEV) env = "Development (localhost)";
+        else if (TEST) env = "Test (test.tablet.msbdance.com)";
+        else env = "Production (tablet.msbdance.com)";
+        
+        $admin("environmentDisplay").textContent = env;
+        
+        // Fetch latest commit message
+        fetch(SETTINGS.API_BASE + '/api/latest-commit')
+          .then(r => r.json())
+          .then(data => {
+            if (data.commit) {
+              $admin("latestCommit").textContent = data.commit;
+            }
+          })
+          .catch(() => {
+            $admin("latestCommit").textContent = "Unable to fetch commit info";
+          });
+        
+        // Setup debug toggle
+        const debugToggle = $admin("debugToggle");
+        const debugStatus = $admin("debugStatus");
+        if(debugToggle){
+          const updateDebugUI = ()=>{
+            const isDebugOn = localStorage.getItem('debug') === '1';
+            debugStatus.textContent = isDebugOn ? 'ON' : 'OFF';
+            debugToggle.style.background = isDebugOn ? '#1b2a19' : '#1d1f23';
+            debugToggle.style.borderColor = isDebugOn ? '#2a5a36' : 'rgba(255,255,255,.2)';
+            debugStatus.style.color = isDebugOn ? '#b9f6ce' : '#cdd0d4';
+          };
+          updateDebugUI();
+          debugToggle.onclick = ()=>{
+            const currentState = localStorage.getItem('debug') === '1';
+            localStorage.setItem('debug', currentState ? '0' : '1');
+            updateDebugUI();
+            alert('Debug mode ' + (currentState ? 'disabled' : 'enabled') + '. Reload the page to apply changes.');
+          };
+        }
+      }
+
+      // Allow Enter key to unlock
+      adminPin.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          adminUnlock.click();
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
