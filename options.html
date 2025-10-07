@@ -387,8 +387,8 @@
                     <button id="btnSingle" class="btn">Pay for Class(es)</button>
                     <button id="btnMembership" class="btn btn-gold">Purchase Unlimited Membership</button>
                   </div>
-                  <div style="margin-top:14px;display:none" id="doneButtonContainer">
-                    <button id="btnDone" class="btn btn-done">Done</button>
+                  <div style="margin-top:14px;display:none;width:100%" id="doneButtonContainer">
+                    <button id="btnDone" class="btn btn-done" style="width:100%;padding:16px;font-size:16px">Done</button>
                   </div>
                 </div>
                 <div id="panePay" class="pane hide">
@@ -544,8 +544,8 @@
           
           $("#upsellNo").onclick = () => {
             modal.remove();
-            // Show Done button - check-in complete
-            $("#doneButtonContainer").style.display = 'block';
+            // Redirect to home - check-in complete
+            location.href = SETTINGS.HOME_URL;
           };
         }
 
@@ -1812,7 +1812,7 @@
               throw new Error(setupError.message);
             }
             
-            // Now create payment intent with the saved card
+            // Now create payment intent with the NEW card (don't send payment_method_id to avoid PIN check)
             const { productType, amount } = getProductInfo();
             
             const paymentResponse = await fetch(`${API_BASE}/create-payment-intent`, {
@@ -1824,7 +1824,8 @@
                 email,
                 amount,
                 product_type: productType,
-                payment_method_id: setupIntent.payment_method
+                // Don't send payment_method_id for new cards - attach it client-side
+                new_payment_method: setupIntent.payment_method
               })
             });
             

@@ -377,7 +377,7 @@ app.post("/create-payment-intent", async (req, res) => {
             paymentIntentData.customer = customer.id;
         }
 
-        // If payment method is provided, require active PIN session
+        // Handle saved payment method (requires PIN session)
         if (payment_method_id) {
             const auth = (req.get('authorization')||'').trim();
             const token = auth.startsWith('Bearer ')? auth.slice(7): null;
@@ -389,8 +389,13 @@ app.post("/create-payment-intent", async (req, res) => {
             if(sess.singleUse){ sess.used = true; }
             paymentIntentData.payment_method = payment_method_id;
             console.log(`🎯 Using saved payment method (authorized): ${payment_method_id}`);
+        } else if (req.body.new_payment_method) {
+            // Handle NEW payment method (no PIN required)
+            paymentIntentData.payment_method = req.body.new_payment_method;
+            paymentIntentData.setup_future_usage = 'on_session'; // Save for future
+            console.log(`💳 Using new payment method (no PIN required): ${req.body.new_payment_method}`);
         } else {
-            // For new cards, save them automatically after payment
+            // For new cards without pre-saved method, save them automatically after payment
             paymentIntentData.setup_future_usage = 'on_session';
             console.log(`💾 Will save new payment method for future use`);
         }
