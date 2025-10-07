@@ -567,6 +567,16 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 2. Injects new section at top of `CHANGELOG.md`
 3. Returns new version number
 
+### Git Remote Configuration
+
+**CRITICAL**: This repository uses custom remote names (NOT `origin`):
+- `test` → `https://github.com/shun-harris/test-msbd-tablet-system.git`
+- `prod` → `https://github.com/shun-harris/msbd-tablet-system.git`
+
+**Commands**:
+- Deploy to test: `git push test main` (or use `.\scripts\deploy.ps1 test`)
+- Deploy to prod: Use `.\scripts\promote-to-prod.ps1` (never push directly)
+
 ### Railway Configuration
 
 **Test Environment**:
@@ -574,12 +584,14 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 - Branch watch: `main`
 - Custom domain: `test.tablet.msbdance.com`
 - Environment variables: Stripe test keys
+- Git remote: `test`
 
 **Production Environment**:
-- Same GitHub repo
+- GitHub repo: `shun-harris/msbd-tablet-system` (separate repo)
 - Branch watch: `prod-release`
 - Custom domain: `tablet.msbdance.com`
 - Environment variables: Stripe live keys
+- Git remote: `prod`
 
 ---
 
