@@ -250,6 +250,17 @@ app.use((req, res, next) => {
 app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
 app.get("/options", (req, res) => res.sendFile(__dirname + "/options.html"));
 
+// Latest commit endpoint (for admin panel version display)
+app.get("/api/latest-commit", (req, res) => {
+    const { execSync } = require('child_process');
+    try {
+        const commit = execSync('git log -1 --pretty=%B', { encoding: 'utf-8', timeout: 5000 }).trim();
+        res.json({ commit });
+    } catch (error) {
+        res.json({ commit: 'Git info unavailable' });
+    }
+});
+
 // Environment test endpoint
 app.get("/test/environment", (req, res) => {
     const det = detectEnvironment(req);

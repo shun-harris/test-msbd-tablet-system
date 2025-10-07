@@ -381,11 +381,10 @@
             <div class="card">
               <div class="swap-wrap">
                 <div id="panePrimary" class="pane show">
-                  <h3>Quick Actions</h3>
+                  <h3>What would you like to do?</h3>
                   <div style="display:grid;gap:14px">
                     <button id="btnCheck" class="btn" style="font-size:16px;padding:18px">Check in for FREE 6:30 Salsa Basics</button>
-                    <button id="btnSingle" class="btn">Pay for Class(es)</button>
-                    <button id="btnMembership" class="btn btn-gold">Purchase Unlimited Membership</button>
+                    <button id="btnPurchase" class="btn btn-gold">Make a Purchase</button>
                   </div>
                   <div style="margin-top:14px;display:none;width:100%" id="doneButtonContainer">
                     <button id="btnDone" class="btn btn-done" style="width:100%;padding:16px;font-size:16px">Done</button>
@@ -606,25 +605,63 @@
           };
           if($("#payCash")) $("#payCash").onclick=showCashModal;
         }
-        $("#btnSingle").onclick=()=>openPaymentFlow("single", 1);
-        $("#btnMembership").onclick=()=>showMembershipSelectionModal();
+        $("#btnPurchase").onclick=()=>showPurchaseTypeModal();
         
-        // New unified payment flow - shows Cash/Card choice first
-        function openPaymentFlow(kind, quantity, tier) {
+        // Step 1: Show purchase type choice (Group Classes OR Membership)
+        function showPurchaseTypeModal() {
+          const modal = document.createElement('div');
+          modal.id = 'purchase-type-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">What would you like to purchase?</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">Choose one option below</p>
+              
+              <div style="display:grid;gap:12px;margin-bottom:16px">
+                <button id="chooseGroupClasses" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Group Class(es)
+                </button>
+                <button id="chooseMembership" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Unlimited Membership
+                </button>
+              </div>
+              
+              <button id="cancelPurchaseType" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          $("#chooseGroupClasses").onclick = () => {
+            modal.remove();
+            showPaymentMethodChoice("single", 1);
+          };
+          
+          $("#chooseMembership").onclick = () => {
+            modal.remove();
+            showMembershipTierChoice();
+          };
+          
+          $("#cancelPurchaseType").onclick = () => modal.remove();
+        }
+        
+        // Step 2a: Show payment method choice (Card OR Cash) for group classes
+        function showPaymentMethodChoice(kind, quantity, tier) {
           const modal = document.createElement('div');
           modal.id = 'payment-choice-modal';
           modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
           
-          let title = 'Single Class ($20)';
-          let description = 'Choose how you\'d like to pay';
+          let title = 'Group Class ($20)';
+          let description = 'How would you like to pay?';
           
           if (kind === 'membership') {
             if (tier === 'gold') {
               title = 'Gold Membership ($672)';
-              description = '16 weeks unlimited, then $42/week';
+              description = 'Pay by card only';
             } else if (tier === 'silver') {
               title = 'Silver Membership ($196)';
-              description = '4 weeks unlimited, then $49/week';
+              description = 'Pay by card only';
             }
           }
           
@@ -634,14 +671,12 @@
               <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">${description}</p>
               
               <div style="display:grid;gap:12px;margin-bottom:16px">
-                <button id="chooseCard" style="background:#d4af37;color:#1a1d1f;border:none;padding:18px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px">
-                  <span style="font-size:24px">💳</span>
-                  <span>Pay with Card</span>
+                <button id="chooseCard" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Pay with Card
                 </button>
-                <button id="chooseCash" style="background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:18px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px">
-                  <span style="font-size:24px">💵</span>
-                  <span>Pay with Cash</span>
-                </button>
+                ${kind === 'single' ? `<button id="chooseCash" style="background:#d4af37;color:#1a1d1f;border:none;padding:20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:18px">
+                  Pay with Cash
+                </button>` : ''}
               </div>
               
               <button id="cancelPaymentChoice" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
@@ -658,12 +693,129 @@
             showStripeCardForm();
           };
           
-          $("#chooseCash").onclick = () => {
-            modal.remove();
-            showCashInstructions();
-          };
+          if ($("#chooseCash")) {
+            $("#chooseCash").onclick = () => {
+              modal.remove();
+              showCashInstructions();
+            };
+          }
           
           $("#cancelPaymentChoice").onclick = () => modal.remove();
+        }
+        
+        // Step 2b: Show membership tier choice (Gold OR Silver)
+        function showMembershipTierChoice() {
+          const modal = document.createElement('div');
+          modal.id = 'membership-tier-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">Choose Your Membership</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">Select one option below</p>
+              
+              <div style="display:grid;gap:12px;margin-bottom:16px">
+                <button id="chooseGold" style="background:#d4af37;color:#1a1d1f;border:none;padding:24px;border-radius:10px;cursor:pointer;text-align:left">
+                  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Gold - $672</div>
+                  <div style="font-size:13px;opacity:0.9">16 weeks unlimited, then $42/week</div>
+                </button>
+                <button id="chooseSilver" style="background:#c0c0c0;color:#1a1d1f;border:none;padding:24px;border-radius:10px;cursor:pointer;text-align:left">
+                  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Silver - $196</div>
+                  <div style="font-size:13px;opacity:0.9">4 weeks unlimited, then $49/week</div>
+                </button>
+              </div>
+              
+              <button id="cancelMembershipTier" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          $("#chooseGold").onclick = () => {
+            modal.remove();
+            showMembershipAgreement('gold');
+          };
+          
+          $("#chooseSilver").onclick = () => {
+            modal.remove();
+            showMembershipAgreement('silver');
+          };
+          
+          $("#cancelMembershipTier").onclick = () => modal.remove();
+        }
+        
+        // Step 3: Show membership agreement and then proceed to card payment
+        function showMembershipAgreement(tier) {
+          const isGold = tier === 'gold';
+          const price = isGold ? '$672' : '$196';
+          const weeks = isGold ? '16' : '4';
+          const weeklyRate = isGold ? '$42' : '$49';
+          const tierName = isGold ? 'Gold' : 'Silver';
+          
+          const modal = document.createElement('div');
+          modal.id = 'membership-agreement-modal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto';
+          
+          modal.innerHTML = `
+            <div style="background:#1a1d1f;border-radius:16px;padding:32px;max-width:550px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin:20px 0">
+              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">${tierName} Membership - ${price}</h3>
+              <p style="color:#9ca3af;margin:0 0 24px;font-size:14px;text-align:center">${weeks} weeks unlimited, then ${weeklyRate}/week</p>
+              
+              <!-- Agreement Checkboxes -->
+              <div style="background:#0f1012;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
+                <label style="display:flex;gap:12px;margin-bottom:16px;cursor:pointer">
+                  <input type="checkbox" id="agree-billing" style="width:18px;height:18px;margin-top:2px;cursor:pointer;flex-shrink:0">
+                  <span style="color:#e5e7eb;font-size:14px;line-height:1.5">
+                    I understand that <strong style="color:#10b981">weekly billing will start automatically</strong> after my ${weeks}-week period ends.
+                  </span>
+                </label>
+                
+                <label style="display:flex;gap:12px;cursor:pointer">
+                  <input type="checkbox" id="agree-no-complaints" style="width:18px;height:18px;margin-top:2px;cursor:pointer;flex-shrink:0">
+                  <span style="color:#e5e7eb;font-size:14px;line-height:1.5">
+                    I won't complain or act surprised when weekly charges begin. 😉 <span style="color:#9ca3af">(Pro tip: Set a calendar reminder!)</span>
+                  </span>
+                </label>
+              </div>
+              
+              <div style="display:grid;gap:12px">
+                <button id="agreeContinue" disabled style="width:100%;background:#10b981;color:white;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:not-allowed;font-size:16px;opacity:0.5;transition:all 0.2s">
+                  Continue to Payment
+                </button>
+                <button id="cancelAgreement" style="width:100%;background:transparent;color:#9ca3af;border:1px solid var(--border);padding:12px;border-radius:8px;font-weight:500;cursor:pointer;font-size:14px">Cancel</button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          const billing = $("#agree-billing");
+          const noComplaints = $("#agree-no-complaints");
+          const continueBtn = $("#agreeContinue");
+          
+          function checkAgreements() {
+            if (billing.checked && noComplaints.checked) {
+              continueBtn.disabled = false;
+              continueBtn.style.cursor = 'pointer';
+              continueBtn.style.opacity = '1';
+            } else {
+              continueBtn.disabled = true;
+              continueBtn.style.cursor = 'not-allowed';
+              continueBtn.style.opacity = '0.5';
+            }
+          }
+          
+          billing.onchange = checkAgreements;
+          noComplaints.onchange = checkAgreements;
+          
+          $("#agreeContinue").onclick = () => {
+            if (billing.checked && noComplaints.checked) {
+              modal.remove();
+              showPaymentMethodChoice('membership', 1, tier);
+            }
+          };
+          
+          $("#cancelAgreement").onclick = () => modal.remove();
         }
         
         // Show cash payment instructions
@@ -690,125 +842,6 @@
             location.href = SETTINGS.HOME_URL;
           };
         }
-
-        // Membership selection modal
-        function showMembershipSelectionModal() {
-          const modal = document.createElement('div');
-          modal.id = 'membership-selection-modal';
-          modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease-out';
-          
-          modal.innerHTML = `
-            <div style="background:#1a1d1f;border:1px solid var(--border);border-radius:16px;width:90%;max-width:550px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
-              <h3 style="color:#f3f4f6;margin:0 0 8px;font-size:24px;text-align:center">Choose Your Membership</h3>
-              <p style="color:#9ca3af;margin:0 0 28px;font-size:14px;text-align:center">Select the plan that works best for you</p>
-              
-              <div style="display:grid;gap:16px;margin-bottom:24px">
-                <!-- Gold Option (16 weeks) -->
-                <label class="membership-option" data-tier="gold" style="display:flex;gap:16px;padding:20px;background:#2a2d2f;border:2px solid transparent;border-radius:12px;cursor:pointer;transition:all 0.2s">
-                  <input type="radio" name="membership-tier" value="gold" style="width:20px;height:20px;margin-top:2px;cursor:pointer">
-                  <div style="flex:1">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                      <span style="color:#d4af37;font-size:18px;font-weight:700">Gold Membership</span>
-                      <span style="background:#d4af37;color:#1a1d1f;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">16 WEEKS</span>
-                    </div>
-                    <div style="color:#f3f4f6;font-size:28px;font-weight:700;margin-bottom:8px">$672</div>
-                    <div style="color:#9ca3af;font-size:13px;margin-bottom:4px">16 weeks of unlimited classes</div>
-                    <div style="color:#d4af37;font-size:12px;font-weight:600">Then $42/week after your 16 weeks</div>
-                  </div>
-                </label>
-                
-                <!-- Silver Option (4 weeks) -->
-                <label class="membership-option" data-tier="silver" style="display:flex;gap:16px;padding:20px;background:#2a2d2f;border:2px solid transparent;border-radius:12px;cursor:pointer;transition:all 0.2s">
-                  <input type="radio" name="membership-tier" value="silver" style="width:20px;height:20px;margin-top:2px;cursor:pointer">
-                  <div style="flex:1">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                      <span style="color:#c0c0c0;font-size:18px;font-weight:700">Silver Membership</span>
-                      <span style="background:#c0c0c0;color:#1a1d1f;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">4 WEEKS</span>
-                    </div>
-                    <div style="color:#f3f4f6;font-size:28px;font-weight:700;margin-bottom:8px">$196</div>
-                    <div style="color:#9ca3af;font-size:13px;margin-bottom:4px">4 weeks of unlimited classes</div>
-                    <div style="color:#c0c0c0;font-size:12px;font-weight:600">Then $49/week after your 4 weeks</div>
-                  </div>
-                </label>
-              </div>
-              
-              <!-- Agreement Checkboxes -->
-              <div style="background:#0f1012;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
-                <label style="display:flex;gap:12px;margin-bottom:16px;cursor:pointer">
-                  <input type="checkbox" id="agree-billing" style="width:18px;height:18px;margin-top:2px;cursor:pointer">
-                  <span style="color:#e5e7eb;font-size:14px;line-height:1.5">
-                    I understand that <strong style="color:#10b981">weekly billing will start automatically</strong> after my initial period ends (16 weeks for Gold, 4 weeks for Silver).
-                  </span>
-                </label>
-                
-                <label style="display:flex;gap:12px;cursor:pointer">
-                  <input type="checkbox" id="agree-no-complaints" style="width:18px;height:18px;margin-top:2px;cursor:pointer">
-                  <span style="color:#e5e7eb;font-size:14px;line-height:1.5">
-                    I won't complain or act surprised when weekly charges begin after my initial period. 😉 <span style="color:#9ca3af">(Pro tip: Set a calendar reminder if you tend to forget these things!)</span>
-                  </span>
-                </label>
-              </div>
-              
-              <div id="membership-error" style="color:#ff6b6b;font-size:13px;margin-bottom:12px;min-height:20px;text-align:center"></div>
-              
-              <div style="display:flex;gap:12px">
-                <button id="membership-cancel" type="button" style="flex:1;background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px">Cancel</button>
-                <button id="membership-continue" type="button" style="flex:1;background:#10b981;color:#ffffff;border:none;padding:14px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px">Continue to Payment</button>
-              </div>
-            </div>
-          `;
-          
-          document.body.appendChild(modal);
-          
-          // Add hover effects for membership options
-          const options = modal.querySelectorAll('.membership-option');
-          options.forEach(option => {
-            const radio = option.querySelector('input[type="radio"]');
-            option.addEventListener('click', () => {
-              radio.checked = true;
-              options.forEach(opt => opt.style.borderColor = 'transparent');
-              option.style.borderColor = option.dataset.tier === 'gold' ? '#d4af37' : '#c0c0c0';
-            });
-            option.addEventListener('mouseenter', () => {
-              if(!radio.checked) option.style.background = '#35383a';
-            });
-            option.addEventListener('mouseleave', () => {
-              if(!radio.checked) option.style.background = '#2a2d2f';
-            });
-          });
-          
-          const membershipError = document.getElementById('membership-error');
-          const continueBtn = document.getElementById('membership-continue');
-          const cancelBtn = document.getElementById('membership-cancel');
-          
-          cancelBtn.onclick = () => modal.remove();
-          
-          continueBtn.onclick = () => {
-            // Validate selection
-            const selectedTier = document.querySelector('input[name="membership-tier"]:checked');
-            if (!selectedTier) {
-              membershipError.textContent = 'Please select a membership tier';
-              return;
-            }
-            
-            // Validate checkboxes
-            const agreeBilling = document.getElementById('agree-billing').checked;
-            const agreeNoComplaints = document.getElementById('agree-no-complaints').checked;
-            
-            if (!agreeBilling || !agreeNoComplaints) {
-              membershipError.textContent = 'Please check both agreement boxes to continue';
-              return;
-            }
-            
-            // Clear error and proceed
-            membershipError.textContent = '';
-            modal.remove();
-            
-            // Open payment flow with selected tier
-            openPaymentFlow('membership', 1, selectedTier.value);
-          };
-        }
-
         // Overlay close goes back to home (main input page)
         $("#qrDone").onclick=()=>{ location.href = SETTINGS.HOME_URL; };
 
@@ -2318,6 +2351,10 @@
             <div><strong>Environment:</strong> <span id="environmentDisplay">Loading...</span></div>
             <div><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">Jan 2025</span></div>
             <div><strong>Page:</strong> Payment Options</div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)">
+              <strong>Latest Change:</strong>
+              <div id="latestCommit" style="margin-top:4px;padding:8px;background:rgba(0,0,0,.3);border-radius:6px;font-size:11px;color:#9ca3af;line-height:1.5;font-family:monospace">Loading...</div>
+            </div>
           </div>
           <div style="margin-top:12px;text-align:center">
             <button id="debugToggle" style="padding:8px 16px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600">Debug: <span id="debugStatus">OFF</span></button>
@@ -2376,6 +2413,18 @@
         else env = "Production (tablet.msbdance.com)";
         
         $admin("environmentDisplay").textContent = env;
+        
+        // Fetch latest commit message
+        fetch(SETTINGS.API_BASE + '/api/latest-commit')
+          .then(r => r.json())
+          .then(data => {
+            if (data.commit) {
+              $admin("latestCommit").textContent = data.commit;
+            }
+          })
+          .catch(() => {
+            $admin("latestCommit").textContent = "Unable to fetch commit info";
+          });
         
         // Setup debug toggle
         const debugToggle = $admin("debugToggle");
