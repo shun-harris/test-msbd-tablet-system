@@ -840,31 +840,45 @@
           
           document.body.appendChild(modal);
           
-          const cashOkBtn = $("#cashOk");
-          const payCardBtn = $("#payCardInstead");
+          // Use querySelector on the modal element directly
+          const cashOkBtn = modal.querySelector('#cashOk');
+          const payCardBtn = modal.querySelector('#payCardInstead');
+          
+          console.log('Cash modal buttons:', { cashOkBtn, payCardBtn, homeUrl: SETTINGS.HOME_URL });
           
           if (cashOkBtn) {
-            cashOkBtn.onclick = (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Cash OK clicked, redirecting to:', SETTINGS.HOME_URL);
-              modal.remove();
-              setTimeout(() => {
-                window.location.href = SETTINGS.HOME_URL;
-              }, 100);
+            cashOkBtn.onclick = function(e) {
+              console.log('Cash OK button clicked!');
+              try {
+                e.preventDefault();
+                e.stopPropagation();
+                const homeUrl = SETTINGS.HOME_URL;
+                console.log('Removing modal and redirecting to:', homeUrl);
+                modal.remove();
+                console.log('Modal removed, about to redirect...');
+                window.location.href = homeUrl;
+                console.log('Redirect command executed');
+              } catch (error) {
+                console.error('Error in cash OK handler:', error);
+                alert('Error: ' + error.message);
+              }
             };
+          } else {
+            console.error('Cash OK button not found!');
           }
           
           if (payCardBtn) {
-            payCardBtn.onclick = (e) => {
+            payCardBtn.onclick = function(e) {
+              console.log('Pay with card instead clicked');
               e.preventDefault();
               e.stopPropagation();
-              console.log('Pay with card instead clicked');
               modal.remove();
               ctx.kind = 'single';
               classQuantity = 1;
               showStripeCardForm();
             };
+          } else {
+            console.error('Pay card button not found!');
           }
         }
         // Overlay close goes back to home (main input page)
