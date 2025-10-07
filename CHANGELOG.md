@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
+## [2.8.1] - 2025-10-07
+### Fixed
+- **Payment Method Attach Error**: Fixed "payment method already attached to customer" error when adding new cards
+  - Server now checks if payment method is already attached before attempting to attach again
+  - Prevents duplicate attachment attempts that caused payment flow failures
+  - Properly handles SetupIntent card attachment from frontend
+- **Duplicate Customer Creation**: Fixed SetupIntent endpoint creating duplicate customers instead of finding existing ones
+  - `/create-setup-intent` now uses same customer lookup logic as `/create-payment-intent`
+  - Searches by email first, then phone (both direct field and metadata)
+  - Prevents multiple Stripe customer records for same user
+  - Each phone number now correctly maps to single customer with multiple saved cards
+
 ## [2.8.0] - 2025-10-07
 ### Added
 - **Options Page UI Redesign**: Complete visual refresh with gold theming and improved hierarchy

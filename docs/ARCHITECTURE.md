@@ -76,6 +76,24 @@ function normalizePhone(phone) {
 - **Setup future usage**: `setup_future_usage='on_session'` for new cards to enable saving
 - **Explicit saved card addition**: Uses `/create-setup-intent` endpoint
 
+### Customer Lookup Strategy (Critical)
+
+Both `/create-setup-intent` and `/create-payment-intent` endpoints **must use identical customer lookup logic** to prevent duplicate customer creation and payment method attachment errors.
+
+**Search Order**:
+1. **Email first** (if provided and not fallback `@tablet.msbdance.com`): `stripe.customers.search({ query: "email:'user@example.com'" })`
+2. **Phone in metadata** (fallback): `stripe.customers.search({ query: "metadata['phone']:'6019551203'" })`
+3. **Phone in direct field** (fallback): `stripe.customers.search({ query: "phone:'6019551203'" })`
+4. **Create new customer** (only if not found)
+
+**Why This Matters**:
+- Prevents "payment method already attached to customer" errors
+- Ensures one customer per phone number (multiple cards per customer)
+- Allows seamless upgrade from fallback email to real email via webhooks
+- Maintains consistency across SetupIntent and PaymentIntent flows
+
+**Implementation**: See `server.js` lines 288-376 (create-payment-intent) and lines 791-870 (create-setup-intent)
+
 ---
 
 ## Payment Modal Architecture

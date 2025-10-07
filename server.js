@@ -404,18 +404,31 @@ app.post("/create-payment-intent", async (req, res) => {
             // Handle NEW payment method (no PIN required)
             const pmId = req.body.new_payment_method;
             
-            // Attach the payment method to the customer first
+            // Check if payment method is already attached before trying to attach
             if (customer) {
                 try {
-                    await stripe.paymentMethods.attach(pmId, { customer: customer.id });
-                    console.log(`💳 Attached new payment method ${pmId} to customer ${customer.id}`);
+                    // Retrieve the payment method to check if it's already attached
+                    const paymentMethod = await stripe.paymentMethods.retrieve(pmId);
+                    
+                    if (paymentMethod.customer === customer.id) {
+                        console.log(`💳 Payment method ${pmId} already attached to customer ${customer.id}`);
+                    } else if (paymentMethod.customer) {
+                        // Attached to a different customer - this is an error
+                        console.error(`❌ Payment method ${pmId} already attached to different customer ${paymentMethod.customer}`);
+                        return res.status(400).json({ error: 'This payment method is already attached to another customer.' });
+                    } else {
+                        // Not attached yet, attach it now
+                        await stripe.paymentMethods.attach(pmId, { customer: customer.id });
+                        console.log(`💳 Attached new payment method ${pmId} to customer ${customer.id}`);
+                    }
                 } catch (attachError) {
-                    // If already attached (shouldn't happen but handle gracefully)
-                    if (attachError.code !== 'resource_already_exists') {
+                    // Handle specific error codes
+                    if (attachError.code === 'resource_already_exists') {
+                        console.log(`💳 Payment method ${pmId} already attached (caught error)`);
+                    } else {
                         console.error('Failed to attach payment method:', attachError);
                         throw attachError;
                     }
-                    console.log(`💳 Payment method ${pmId} already attached to customer`);
                 }
             }
             
@@ -774,15 +787,88 @@ app.post("/create-setup-intent", async (req, res) => {
         const { stripe, environment, detection } = getStripeForRequest(req);
         const { phone, name, email } = req.body;
         
-        // Create or get customer
-        const customer = await stripe.customers.create({
-            phone: phone,
-            name: name,
-            email: email || `${phone}@tablet.msbdance.com`,
-            metadata: { source: 'tablet_system' }
-        });
+        let customer;
         
-        console.log("👤 Customer created:", customer.id);
+        // Try to find existing customer by email first (most reliable), then phone
+        if (email && !email.includes('@tablet.msbdance.com')) {
+            console.log(`🔍 Searching for customer by email: ${email}`);
+            let existingCustomers = await stripe.customers.search({
+                query: `email:'${email}'`,
+                limit: 1
+            });
+            
+            if (existingCustomers.data.length > 0) {
+                customer = existingCustomers.data[0];
+                console.log(`👤 Found existing customer by email: ${customer.id}`);
+                
+                // Update phone if provided and different
+                if (phone && customer.phone !== phone) {
+                    console.log(`📱 Updating customer phone: ${phone}`);
+                    customer = await stripe.customers.update(customer.id, {
+                        phone: phone,
+                        name: name || customer.name,
+                        metadata: { ...customer.metadata, phone: phone }
+                    });
+                }
+            }
+        }
+        
+        // If not found by email and we have phone, try phone lookup
+        if (!customer && phone) {
+            console.log(`🔍 Searching for customer by phone: ${phone}`);
+            // Try multiple ways to find existing customer
+            let existingCustomers = await stripe.customers.search({
+                query: `metadata['phone']:'${phone}'`,
+                limit: 1
+            });
+            
+            // If not found in metadata, try phone field directly
+            if (existingCustomers.data.length === 0) {
+                existingCustomers = await stripe.customers.search({
+                    query: `phone:'${phone}'`,
+                    limit: 1
+                });
+            }
+            
+            if (existingCustomers.data.length > 0) {
+                customer = existingCustomers.data[0];
+                console.log(`👤 Found existing customer by phone: ${customer.id}`);
+                
+                // Update customer with real email if provided and different
+                if (email && email !== customer.email && !email.includes('@tablet.msbdance.com')) {
+                    console.log(`📧 Updating customer email: ${email}`);
+                    customer = await stripe.customers.update(customer.id, {
+                        email: email,
+                        name: name || customer.name
+                    });
+                }
+                
+                // Ensure phone is in metadata for future lookups
+                if (!customer.metadata.phone) {
+                    console.log(`🔧 Adding phone to customer metadata for future lookups`);
+                    await stripe.customers.update(customer.id, {
+                        metadata: { ...customer.metadata, phone: phone }
+                    });
+                }
+            }
+        }
+        
+        // Create new customer if not found
+        if (!customer) {
+            const customerData = {
+                phone: phone,
+                name: name || 'Dance Student',
+                email: email || `${phone}@tablet.msbdance.com`,
+                metadata: { 
+                    source: 'tablet_system', 
+                    phone: phone,
+                    created_via: email ? 'setup_intent_with_email' : 'setup_intent_fallback'
+                }
+            };
+            
+            customer = await stripe.customers.create(customerData);
+            console.log(`👤 Created new customer: ${customer.id} for phone ${phone}${email ? ` with email ${email}` : ' with fallback email'}`);
+        }
         
         const setupIntent = await stripe.setupIntents.create({
             customer: customer.id,

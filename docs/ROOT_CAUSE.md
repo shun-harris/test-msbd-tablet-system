@@ -3,6 +3,110 @@
 This document captures post‑incident summaries so future maintenance is faster and knowledge is preserved.
 
 ---
+## 0. Payment Method "Already Attached" Error & Duplicate Customer Creation
+**Date first observed:** 2025-10-07  
+**Resolved:** 2025-10-07 (v2.8.1)
+
+### Symptom
+When adding a new payment card (without entering PIN, in the "top section" of payment modal):
+1. User enters card details and clicks "Confirm Purchase"
+2. Error appears: "The payment method you provided has already been attached to a customer"
+3. Additionally, multiple duplicate customer records were created in Stripe for the same phone number
+4. Different test cards (4242..., 5555...) appeared to "overwrite" each other instead of being saved separately
+
+### Impact
+- Payment flow completely broken for new card additions
+- Unable to save multiple cards to the same customer
+- Duplicate customer records polluting Stripe database
+- Confusing user experience where saved cards don't persist correctly
+
+### Root Cause (Single Statement)
+The `/create-setup-intent` endpoint was **always creating a new customer** instead of looking up existing customers, causing the SetupIntent to attach the payment method to a duplicate customer, which then failed when `/create-payment-intent` tried to attach it to the original customer.
+
+### Technical Flow of the Bug
+1. Frontend calls `/create-setup-intent` with phone `6019551203`
+2. **Bug:** Server creates NEW customer (e.g., `cus_ABC123`) - no lookup performed
+3. SetupIntent attaches card `pm_xyz` to `cus_ABC123`
+4. Frontend calls `/create-payment-intent` with `new_payment_method: pm_xyz`
+5. Server finds **ORIGINAL customer** `cus_XYZ789` (by email/phone lookup)
+6. Server tries to attach `pm_xyz` to `cus_XYZ789`
+7. ❌ Stripe error: `pm_xyz` already attached to `cus_ABC123`
+
+### Contributing Factors
+- `/create-setup-intent` endpoint (lines 784-814) used `stripe.customers.create()` without any lookup logic
+- `/create-payment-intent` endpoint had proper customer lookup (email → phone metadata → phone field)
+- These two endpoints had divergent customer handling strategies
+- No retry logic or duplicate customer detection
+
+### Fixes Implemented
+1. **Customer Lookup in SetupIntent** (server.js lines 784-873):
+   - Added identical customer lookup logic from `/create-payment-intent`
+   - Search order: email first → phone in metadata → phone in direct field
+   - Only creates new customer if none found
+   - Updates existing customer metadata when found
+
+2. **Payment Method Attach Check** (server.js lines 406-432):
+   - Before attaching, retrieve payment method to check current attachment status
+   - Only attach if not already attached to this customer
+   - Handle error case where attached to different customer
+   - Graceful handling of `resource_already_exists` error
+
+### Code Changes
+**Before (Broken):**
+```javascript
+// create-setup-intent endpoint
+const customer = await stripe.customers.create({  // ❌ Always creates new
+    phone: phone,
+    name: name,
+    email: email || `${phone}@tablet.msbdance.com`,
+    metadata: { source: 'tablet_system' }
+});
+```
+
+**After (Fixed):**
+```javascript
+// Search for existing customer by email, then phone
+let customer;
+if (email && !email.includes('@tablet.msbdance.com')) {
+    let existingCustomers = await stripe.customers.search({
+        query: `email:'${email}'`,
+        limit: 1
+    });
+    if (existingCustomers.data.length > 0) {
+        customer = existingCustomers.data[0];
+        // ... update phone if different
+    }
+}
+// ... fallback to phone lookup, then create if not found
+```
+
+### Validation
+1. Tested with phone `6019551203` and card `4242 4242 4242 4242`
+2. Added second card `5555 5555 5555 4444` with same phone
+3. Both cards attached to **single customer record** in Stripe
+4. No "already attached" errors
+5. Both cards appear in saved cards list (after PIN entry)
+6. Payment processing successful for both new and saved cards
+
+### Preventative Actions
+- **Code Review Checklist:** Ensure all Stripe customer operations use consistent lookup logic
+- **Testing Protocol:** Test payment flows with multiple cards on same phone number
+- **Documentation:** Added to ARCHITECTURE.md payment flow section
+- **Monitoring:** Watch for duplicate customer creation patterns in Stripe dashboard
+
+### Related Commits / Files
+- `server.js` lines 784-873 (create-setup-intent endpoint)
+- `server.js` lines 280-450 (create-payment-intent endpoint)
+- `options.html` lines 1863-1920 (frontend SetupIntent flow)
+- `CHANGELOG.md` v2.8.1 entry
+
+### Lessons Learned
+- Always reuse customer lookup logic across endpoints - avoid code duplication
+- SetupIntents and PaymentIntents must share customer handling strategy
+- Test with multiple payment methods per customer during development
+- Stripe's error messages about "already attached" indicate architectural issues, not user errors
+
+---
 ## 1. Test Stripe Card Appearing in (What Looked Like) Production
 **Date first observed:** 2025-10-03  
 **Resolved:** 2025-10-04  
