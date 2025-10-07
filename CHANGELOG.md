@@ -4,10 +4,6 @@ All notable changes to this project are documented here. This file supersedes th
 
 ## [2.8.0] - 2025-10-07
 ### Added
-- Test deployment
-
-## [Unreleased] - 2025-10-07
-### Added
 - **Options Page UI Redesign**: Complete visual refresh with gold theming and improved hierarchy
   - Gold gradient "Make a Purchase" button with darker center for better text contrast
   - Cream-colored outline and matching text (`#f5f1e8`) on purchase button
