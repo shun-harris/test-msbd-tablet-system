@@ -831,7 +831,10 @@
               <p style="color:#cdd0d4;margin:0 0 24px;font-size:16px;line-height:1.6">
                 Please head to registration to complete your payment.
               </p>
-              <button id="cashOk" style="width:100%;background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px">OK</button>
+              <div style="display:grid;gap:12px">
+                <button id="cashOk" style="width:100%;background:#d4af37;color:#1a1d1f;border:none;padding:16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:16px">OK</button>
+                <button id="payCardInstead" style="width:100%;background:#2a2d2f;color:#f3f4f6;border:1px solid var(--border);padding:14px;border-radius:10px;font-weight:500;cursor:pointer;font-size:14px">Pay with Card Instead</button>
+              </div>
             </div>
           `;
           
@@ -839,7 +842,14 @@
           
           $("#cashOk").onclick = () => {
             modal.remove();
-            location.href = SETTINGS.HOME_URL;
+            window.location.href = SETTINGS.HOME_URL;
+          };
+          
+          $("#payCardInstead").onclick = () => {
+            modal.remove();
+            ctx.kind = 'single';
+            classQuantity = 1;
+            showStripeCardForm();
           };
         }
         // Overlay close goes back to home (main input page)
