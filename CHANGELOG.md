@@ -2,6 +2,36 @@
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
+## [Unreleased] - 2025-10-07
+### Fixed
+- **Critical**: Restored `options.html` from `test/main` branch after file corruption incident
+  - File corruption occurred during multi-line string replacement operations (lines ~573-742)
+  - Recovery attempts via string replacement failed due to emoji encoding mismatches
+  - Full file replacement from working `test/main` branch restored all functionality
+  - Payment modal now fully operational: card input renders, PIN gate appears, buttons responsive
+  
+- **UTF-8 Character Encoding Restoration** (24+ corruptions fixed):
+  - Em dashes `—` (U+2014): Restored in welcome message, payment titles, guest/phone placeholders (was `ΓÇö`)
+  - Checkmarks `✓` (U+2713): Restored in success messages, checked-in confirmations, PIN verification (was `Γ£ô`)
+  - Bullet points `•` (U+2022): Restored in saved card masking "VISA •••• 4242" and debug shortcuts (was `ΓÇó`)
+  - Minus signs `−` (U+2212): Restored in quantity decrease button (was `ΓêÆ`)
+  - Apostrophes `'` (U+2019): Restored in "I'm Done" button (was `ΓÇÖ`)
+  - Ellipsis `…` (U+2026): Restored in "Loading saved cards…" message (was `ΓÇª`)
+  - Wink emoji 😉 (U+1F609): Restored in membership agreement text (was `≡ƒÿë`)
+  - Money emoji 💵 (U+1F4B5): Restored in cash payment modal (was `≡ƒÆ╡`)
+  - Magnifying glass emoji 🔍 (U+1F50D): Restored in debug console label (was `≡ƒöì`)
+  - Gear emoji ⚙️ (U+2699): Restored in admin settings button (was `ΓÜÖ∩╕Å`)
+
+- **Modal Initialization**: Corrected `stripeOverlay` element declaration timing (line 989 vs broken line 625)
+  - Element now declared after DOM insertion, preventing null reference errors
+  - Card input, PIN gate, and action buttons all initialize correctly
+
+### Technical / Internal
+- Created backup `options.html.backup-before-test-main-copy` before file replacement
+- Documented incident in `ROOT_CAUSE.md` (Incident #11) with full debugging journey
+- Added payment modal architecture documentation to `README.md`
+- Lessons learned: Avoid searching for emoji characters in string replacements, always backup before risky operations
+
 ## [2.7.0] - 2025-10-06
 ### Added
 - Test deployment
