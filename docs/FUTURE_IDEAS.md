@@ -33,14 +33,34 @@
    - Offline support
    - Conflict resolution
 
-2. **Page Transition Improvements**
-   - Add smooth fade transitions between index.html and options.html to eliminate white flash
-   - Implement instant loading page with dark background to prevent white gaps
-   - Use CSS transitions or preload next page to ensure seamless navigation
-   - Consider single-page app architecture to avoid full page reloads
-
-3. **Rotating Quotes or Jokes**
+2. **Rotating Quotes or Jokes**
    - Display a "Quote of the Day" or a joke during check-in to enhance user experience
 
-4. **Facial Recognition**
+3. **Facial Recognition**
    - Combine with facial recognition for seamless check-in
+
+## Merchandise Expansion (Future)
+1. **Additional Products**
+   - Hoodies, dance shoes, water bottles, studio merch
+   - Expand beyond T-shirts and beanies
+   
+2. **Size Selection**
+   - Size picker for apparel (S/M/L/XL/XXL)
+   - Inventory tracking per size
+   
+3. **Quantity Selector**
+   - Allow purchasing multiple of same item
+   - Bulk discounts (e.g., 3+ shirts)
+   
+4. **Product Images**
+   - Show product photos in selection modal
+   - Color options for apparel
+   
+5. **Inventory Management**
+   - Track stock levels
+   - Display "Out of Stock" / "Low Stock" warnings
+   - Admin panel for inventory updates
+   
+6. **Order History**
+   - Track merchandise purchases in user profile
+   - Purchase history in member dashboard

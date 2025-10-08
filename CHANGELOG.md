@@ -2,12 +2,109 @@
 
 All notable changes to this project are documented here. This file supersedes the old `PATCH_NOTES.md` file (now deprecated). Version entries follow a simplified Keep a Changelog style with grouped categories.
 
+## [2.9.1] - 2025-10-08
+### Added
+- **GHL Purchase Webhook Integration**: All purchases now send notifications to GoHighLevel
+  - Sends phone number, name, product, quantity, and payment method
+  - Integrates with card payments (automatic on success)
+  - Integrates with cash payments (fires on OK button click)
+  - Supports all product types: classes, merchandise, memberships
+  - Product names: "Dance Class", "T-Shirt", "Beanie", "Gold Membership", "Silver Membership"
+  - Payment methods: "card" or "cash"
+
+### Fixed
+- **Cash Payment Redirect Issue**: Fixed OK button not redirecting to home page
+  - Root cause: Old `showCashModal()` function was still being called instead of new persistent modal
+  - Removed legacy cash modal HTML and function
+  - Updated button handler to call `showCashInstructions()` (new persistent modal)
+  - Cash flow now redirects immediately without modal close animation interference
+
+### Technical Details
+- New function: `sendGHLPurchase({phone, name, product, quantity, paymentMethod})`
+- Webhook URL: `GHL_PURCHASE_WEBHOOK_URL` constant added
+- Integration points: `handlePaymentResult()` (card) and cash OK button handler
+- Fire-and-forget implementation using Image pixel for reliability
+
+## [2.9.0] - 2025-10-08
+### Added
+- **Merchandise Shopping System**: Complete purchase flow for physical products
+  - T-shirts ($25) and Beanies ($15) available for purchase
+  - Integrated with existing Stripe payment system
+  - Card or cash payment options
+  - Dynamic button shows merchandise when free class unavailable
+- **Tip Functionality**: Optional tips on class purchases
+  - Quick options: $2, $5, $10, or custom amount
+  - Friendly messaging: "Support our instructors & studio"
+  - Real-time total display with tip included
+  - Tip flow integrated between payment method and Stripe form
+- **Dynamic Check-in Button Logic**: Time and day-aware UI
+  - Salsa Basics check-in button shows only Monday before 6:45 PM
+  - After 6:45 PM or other days: merchandise button appears instead
+  - Shows "Next free class" information when check-in unavailable
+- **Persistent Modal System**: Smooth transitions between modal screens
+  - Modal backdrop stays visible throughout flow (no background flashing)
+  - Content morphs smoothly with slide animations (0.2s exit, 0.3s enter)
+  - Modal dimensions transition automatically (500px ↔ 520px ↔ 580px)
+  - Converted 6 modals: Purchase Type, Payment Method, Membership Tier, Agreement, Check-in Upsell, Cash Instructions
+
+### Changed
+- **Payment Method Button Styling**: Redesigned for consistency
+  - Card button: Gold solid background with black text
+  - Cash button: Dark background with gold border/text (matches merchandise style)
+  - Added icons with proper spacing
+  - Consistent hover effects (2px lift, glow)
+- **Membership Tier Buttons**: Cleaner, more refined design
+  - Removed heavy gradients, replaced with semi-transparent overlays
+  - Gold tier: 12%→8% gradient with 2px gold border
+  - Silver tier: Dark 60% opacity with subtle white border
+  - Better typography hierarchy: Name → Price (bold accent) → Details → Fine print
+  - Subtle hover effects (no aggressive scaling)
+- **Main Button Text**: Changed "Make a Purchase" → "Buy Classes or Membership" for clarity
+- **Welcome Card Spacing**: Fixed asymmetrical padding (now 24px balanced)
+- **Merchandise Modal Icon**: Changed from stacked layers to shopping tag icon
+
+### Fixed
+- **Merchandise Context Persistence**: Fixed bug where selecting merchandise → Pay with Cash → Pay with Card Instead would show class pricing instead of merchandise price
+  - Root cause: Cash button didn't set context variables before transitioning
+  - Solution: Set `ctx.kind`, `ctx.merchPrice`, `ctx.merchItem` before showing cash instructions
+  - See ROOT_CAUSE.md entry for full technical details
+- **Variable Redeclaration**: Fixed JavaScript error causing blank page
+  - Removed duplicate `btnCheck` and `btnMerch` declarations
+  - Page now renders correctly
+
+### Technical Details
+- Context management expanded: Added `ctx.kind`, `ctx.merchPrice`, `ctx.merchItem`, `ctx.tipAmount`
+- Modal architecture: `createPersistentModal()`, `updateModalContent()`, `closeModal()`
+- New functions: `isSalsaBasicsAvailable()`, `getNextSalsaBasicsInfo()`, `showMerchandiseModal()`, `showTipSelection()`
+- CSS animations: `contentFadeOut`, `contentFadeIn` for modal transitions
+- See ARCHITECTURE.md for complete technical documentation
+
+## [2.8.3] - 2025-10-07
+### Added
+- **Ambient Floating Orbs**: Premium subtle background animation on index page
+  - Three large gradient orbs in gold tones slowly float and pulse
+  - Heavy blur (60px) with low opacity (8%) for subtlety
+  - Different animation durations (25s, 30s, 35s) for organic movement
+  - Pure CSS animation - no JavaScript overhead
+  - Adds depth and premium Apple-style aesthetic without distraction
+
+### Changed
+- **Premium Smooth Transitions**: Comprehensive animation improvements across options.html
+  - Payment modal now scales up and fades in smoothly (0.3s with bounce easing)
+  - QR code overlay has matching smooth entrance/exit animations
+  - Pane switching extended to 300ms with better cubic-bezier curve
+  - Payment success modal has dramatic celebratory entrance with spring effect
+  - All overlays now close with smooth fade-out transitions
+  - Consistent, high-end feel throughout entire user experience
+
 ## [2.8.2] - 2025-10-07
 ### Fixed
-- **White Flash Between Pages**: Added instant loading screen to options.html
-  - Shows bouncing ball animation on gradient background during page load
+- **White Flash Between Pages**: Added smart loading screen to options.html
+  - Shows gradient background immediately for seamless transition
+  - Bouncing ball animation appears only if load takes >300ms (premium feel)
+  - Fast loads = smooth gradient fade (most common)
+  - Slow loads = animation provides visual feedback
   - Eliminates white screen flash that made site appear broken
-  - Smooth fade-out transition when content is ready
   - Prevents jarring visual experience on Fully Kiosk tablets
 
 ## [2.8.1] - 2025-10-07

@@ -3,7 +3,182 @@
 This document captures post‑incident summaries so future maintenance is faster and knowledge is preserved.
 
 ---
-## 0. Payment Method "Already Attached" Error & Duplicate Customer Creation
+## 0. Cash Payment Redirect Not Working
+**Date first observed:** 2025-10-08  
+**Resolved:** 2025-10-08 (v2.9.1)
+
+### Symptom
+When completing a cash payment on the options page:
+1. User selects product → "Pay with Cash" → Clicks "OK"
+2. Page does not redirect back to home page
+3. User is stuck on the cash instructions modal
+4. Expected: Should redirect to index.html
+
+### Impact
+- Users unable to complete cash payment flow
+- Tablet requires manual refresh or navigation
+- Poor user experience
+- Incomplete transaction flow
+
+### Root Cause (Single Statement)
+The old legacy `showCashModal()` function was still being called instead of the new persistent modal system's `showCashInstructions()`, and the legacy modal's redirect logic was broken by modal close animations.
+
+### Technical Flow of the Bug
+1. User clicks "Pay with Cash" button
+2. Line 1081: `$("#payCash").onclick=showCashModal;` (OLD FUNCTION)
+3. Old function shows legacy `#cashOverlay` modal (line 828-836)
+4. Old OK button handler (line 680): `location.href=SETTINGS.HOME_URL;`
+5. Handler tries to redirect but modal close animation interferes
+6. Redirect never completes
+
+### Contributing Factors
+- Two separate cash modal implementations coexisting in codebase
+- Old modal system (lines 676-681, 828-836) not removed when new persistent modal system added
+- Payment flow was updated to use new modals but button handler still called old function
+- No cleanup/deprecation of legacy modal code
+
+### Fixes Implemented
+**File:** `options.html`
+
+**1. Updated button handler (line 1081):**
+```javascript
+// BEFORE (Broken):
+if($("#payCash")) $("#payCash").onclick=showCashModal;
+
+// AFTER (Fixed):
+if($("#payCash")) $("#payCash").onclick=showCashInstructions;
+```
+
+**2. Removed legacy function (lines 676-681):**
+```javascript
+// DELETED:
+function showCashModal(){
+  const el=$("#cashOverlay");
+  el.style.display="flex";
+  try{confetti({particleCount:40,spread:50,origin:{y:.6}});}catch(_){}
+  $("#cashOk").onclick=()=>{location.href=SETTINGS.HOME_URL;};
+}
+```
+
+**3. Removed legacy modal HTML (lines 828-836):**
+```html
+<!-- DELETED:
+<div id="cashOverlay" class="modalOverlay">
+  <div class="modalBox">
+    <h3>Pay with cash</h3>
+    <p>Please head to registration to finish your purchase.</p>
+    <button id="cashOk" class="btn btn-gold">OK</button>
+  </div>
+</div>
+-->
+```
+
+**4. Fixed new modal redirect (lines 1967-1969):**
+```javascript
+// BEFORE: Had setTimeout and closeModal interference
+closeModal();
+setTimeout(() => { window.location.href = homeUrl; }, 300);
+
+// AFTER: Immediate redirect
+window.location.href = homeUrl;
+```
+
+### Validation
+1. Tested class purchase → Pay with Cash → OK
+   - ✅ Redirects to home immediately
+2. Tested merchandise → Pay with Cash → OK
+   - ✅ Redirects to home immediately
+3. Tested membership → Pay with Cash → OK
+   - ✅ Redirects to home immediately
+4. Tested "Pay with Card Instead" flow still works
+   - ✅ Transitions to Stripe form correctly
+
+### Preventative Actions
+- **Code Cleanup:** Remove legacy code immediately when replacing with new implementation
+- **Function Naming:** Use clear deprecation comments when phasing out old functions
+- **Testing Protocol:** Test all user paths after modal system changes
+- **Documentation:** Track modal system architecture changes in ARCHITECTURE.md
+
+### Related Changes
+- Added GHL purchase webhook that fires on cash OK button click
+- Webhook sends before redirect to ensure tracking even if redirect is fast
+
+---
+## 1. Merchandise Context Lost in Cash→Card Payment Flow
+**Date first observed:** 2025-10-08  
+**Resolved:** 2025-10-08 (v2.9.0)
+
+### Symptom
+When purchasing merchandise (T-shirt $25 or Beanie $15):
+1. User selects merchandise item → "Pay with Cash" → "Pay with Card Instead"
+2. Stripe form incorrectly shows "Purchase Single Classes" with $20 pricing
+3. Expected: Should show "Purchase 👕 T-Shirt ($25)" or "Purchase 🧢 Beanie ($15)"
+
+### Impact
+- Incorrect pricing displayed to customer
+- Potential for wrong amount to be charged
+- Confusing user experience
+- Loss of merchandise sale tracking
+
+### Root Cause (Single Statement)
+The "Pay with Cash" button in the merchandise payment modal (`showMerchPaymentMethod`) didn't set context variables before calling `showCashInstructions()`, so when "Pay with Card Instead" was clicked, the context defaulted to empty and `showStripeCardForm()` treated it as a single class purchase.
+
+### Technical Flow of the Bug
+1. User selects T-shirt ($25) → Calls `showMerchPaymentMethod('tshirt', 25)`
+2. **Bug:** Cash button onclick: `cashBtn.onclick = () => showCashInstructions();` (no context set)
+3. Context variables remain unset: `ctx.kind`, `ctx.merchPrice`, `ctx.merchItem`
+4. Cash instructions modal shows
+5. User clicks "Pay with Card Instead" → Calls `showStripeCardForm()`
+6. `showStripeCardForm()` checks `ctx.kind`:
+   - Not 'membership' ✗
+   - Not 'merchandise' ✗ (because it was never set)
+   - Falls through to default: "Purchase Single Classes"
+7. Displays wrong pricing and product type
+
+### Contributing Factors
+- Card button properly set context: `ctx.kind = 'merchandise'; ctx.merchPrice = price; ctx.merchItem = item;`
+- Cash button had no context setting logic (assumed context would persist)
+- No validation or defensive checks in `showStripeCardForm()` for missing context
+
+### Fixes Implemented
+**File:** `options.html` lines ~1430-1440
+
+**Before (Broken):**
+```javascript
+cashBtn.onclick = () => showCashInstructions();  // ❌ No context set
+```
+
+**After (Fixed):**
+```javascript
+cashBtn.onclick = () => {
+  // Set merchandise context before showing cash instructions
+  ctx.kind = 'merchandise';
+  ctx.merchPrice = price;
+  ctx.merchItem = item;
+  showCashInstructions();
+};
+```
+
+### Validation
+1. Tested T-shirt → Pay with Cash → Pay with Card Instead
+   - ✅ Shows "Purchase 👕 T-Shirt ($25)"
+2. Tested Beanie → Pay with Cash → Pay with Card Instead
+   - ✅ Shows "Purchase 🧢 Beanie ($15)"
+3. Tested class purchase flow still works correctly
+   - ✅ Shows "Purchase Single Classes" with quantity selector
+
+### Preventative Actions
+- **Code Review Pattern:** Always set context variables before transitioning between modals that rely on that context
+- **Defensive Coding:** Consider adding context validation in `showStripeCardForm()` with fallback behavior
+- **Testing Protocol:** Test all payment paths (card direct, cash→card) for each product type
+
+### Related Functions
+- `showMerchPaymentMethod(item, price)` - Merchandise payment modal
+- `showCashInstructions()` - Cash instructions modal (context-agnostic)
+- `showStripeCardForm()` - Stripe form (context-dependent)
+
+---
+## 1. Payment Method "Already Attached" Error & Duplicate Customer Creation
 **Date first observed:** 2025-10-07  
 **Resolved:** 2025-10-07 (v2.8.1)
 

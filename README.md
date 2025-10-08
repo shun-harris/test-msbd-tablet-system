@@ -2,7 +2,7 @@
 
 A fullstack check-in and payment system for MSBD Dance Studio, handling member attendance tracking and drop-in customer purchases with Stripe integration.
 
-[![Version](https://img.shields.io/badge/version-2.8.0-gold)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.9.1-gold)](CHANGELOG.md)
 [![Environment](https://img.shields.io/badge/test-test.tablet.msbdance.com-blue)](https://test.tablet.msbdance.com)
 [![Environment](https://img.shields.io/badge/prod-tablet.msbdance.com-green)](https://tablet.msbdance.com)
 
@@ -40,6 +40,9 @@ The system consists of two HTML pages with distinct user flows:
 - PIN-protected saved card system (SQLite storage)
 - Dual-mode Stripe integration (test/live toggle on test environment)
 - Automatic version bumping with semantic commit detection
+- Merchandise shopping (T-shirts, beanies) with integrated payment flow
+- Optional tip collection on class purchases
+- Dynamic UI based on time/day (check-in availability)
 
 📚 **For technical deep-dives, see [Architecture Documentation](docs/ARCHITECTURE.md)**
 

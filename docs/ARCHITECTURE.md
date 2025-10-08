@@ -8,10 +8,12 @@ This document contains technical deep-dives into the MSBD Tablet System architec
 1. [System Overview](#system-overview)
 2. [Stripe Customer Strategy](#stripe-customer-strategy)
 3. [Payment Modal Architecture](#payment-modal-architecture)
-4. [User Flows](#user-flows)
-5. [UI Design System](#ui-design-system)
-6. [Environment & Deployment](#environment--deployment)
-7. [Security & Safety](#security--safety)
+4. [Persistent Modal System](#persistent-modal-system)
+5. [Context Management](#context-management)
+6. [User Flows](#user-flows)
+7. [UI Design System](#ui-design-system)
+8. [Environment & Deployment](#environment--deployment)
+9. [Security & Safety](#security--safety)
 
 ---
 
@@ -333,6 +335,213 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 
 ---
 
+## Persistent Modal System
+
+### Architecture (v2.9.0)
+
+The payment flow uses a **persistent modal container** system that eliminates jarring transitions between screens.
+
+**Key Concept**: One modal backdrop stays visible throughout the entire flow. Only the content inside morphs.
+
+### Core Functions
+
+```javascript
+// Create the persistent container (called once)
+function createPersistentModal() {
+  persistentModal = document.createElement('div');
+  persistentModal.className = 'enhanced-modal-backdrop';
+  
+  modalContentBox = document.createElement('div');
+  modalContentBox.className = 'enhanced-modal-box';
+  modalContentBox.style.cssText = 'background:#141519;padding:36px;max-width:520px;width:100%;transition:max-width 0.3s ease, padding 0.3s ease';
+  
+  persistentModal.appendChild(modalContentBox);
+  document.body.appendChild(persistentModal);
+}
+
+// Update content with smooth transition
+function updateModalContent(newContentHTML, maxWidth = '520px', onComplete = null) {
+  // 1. Fade out current content (0.2s, slide left)
+  modalContentBox.classList.add('modal-content-exit');
+  
+  setTimeout(() => {
+    // 2. Morph dimensions
+    modalContentBox.style.maxWidth = maxWidth;
+    
+    // 3. Update content
+    modalContentBox.innerHTML = newContentHTML;
+    
+    // 4. Fade in new content (0.3s, slide in from right)
+    modalContentBox.classList.remove('modal-content-exit');
+    modalContentBox.classList.add('modal-content-enter');
+    
+    setTimeout(() => {
+      modalContentBox.classList.remove('modal-content-enter');
+      if (onComplete) onComplete();
+    }, 300);
+  }, 200);
+}
+
+// Close modal gracefully
+function closeModal() {
+  if (persistentModal) {
+    persistentModal.classList.add('modal-exit');
+    setTimeout(() => {
+      if (persistentModal && persistentModal.parentNode) {
+        persistentModal.remove();
+      }
+      persistentModal = null;
+      modalContentBox = null;
+    }, 250);
+  }
+}
+```
+
+### CSS Animations
+
+```css
+@keyframes contentFadeOut {
+  0% { opacity: 1; transform: translateX(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-20px) scale(0.98); }
+}
+
+@keyframes contentFadeIn {
+  0% { opacity: 0; transform: translateX(20px) scale(0.98); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.modal-content-exit { animation: contentFadeOut 0.2s ease-out forwards; }
+.modal-content-enter { animation: contentFadeIn 0.3s ease-out forwards; }
+```
+
+### Modal Dimensions
+
+Modals automatically transition between different widths:
+
+| Modal | Max Width | Purpose |
+|-------|-----------|---------|
+| Purchase Type | 520px | Shopping cart, group/membership selection |
+| Payment Method | 500px | Card/cash buttons |
+| Membership Tier | 520px | Gold/silver cards |
+| Membership Agreement | 580px | Wide for checkbox content |
+| Tip Selection | 500px | Quick tip buttons |
+| Merchandise | 520px | Product selection |
+| Cash Instructions | 500px | Simple text instructions |
+
+### Converted Modals
+
+All these modals use the persistent system:
+
+1. **Purchase Type Choice** → `showPurchaseTypeModal()`
+2. **Payment Method** → `showPaymentMethodChoice(kind, quantity, tier)`
+3. **Membership Tier** → `showMembershipTierChoice()`
+4. **Membership Agreement** → `showMembershipAgreement(tier)`
+5. **Tip Selection** → `showTipSelection(quantity)`
+6. **Merchandise Selection** → `showMerchandiseModal()`
+7. **Merchandise Payment** → `showMerchPaymentMethod(item, price)`
+8. **Cash Instructions** → `showCashInstructions()`
+9. **Check-in Upsell** → `showCheckInUpsellPrompt()`
+
+### Benefits
+
+✅ No background flashing  
+✅ Smooth dimension transitions  
+✅ Content slides elegantly  
+✅ Consistent user experience  
+✅ Feels like native app  
+
+---
+
+## Context Management
+
+### The `ctx` Object
+
+Purchase flow state is managed through a global context object that persists across modal transitions.
+
+**Properties**:
+
+```javascript
+const ctx = {
+  kind: 'single' | 'membership' | 'merchandise',  // Product type
+  membershipTier: 'gold' | 'silver',               // For memberships
+  merchPrice: 25 | 15,                             // Merchandise pricing
+  merchItem: 'tshirt' | 'beanie',                  // Merchandise type
+  tipAmount: 0-100                                  // Optional tip (dollars)
+};
+```
+
+### Context Flow Examples
+
+**Class Purchase with Tip**:
+```javascript
+// Step 1: Purchase Type Modal
+ctx.kind = 'single';
+
+// Step 2: Payment Method Modal
+classQuantity = 2;  // User selects quantity
+
+// Step 3: Tip Selection Modal
+ctx.tipAmount = 5;  // User selects $5 tip
+
+// Step 4: Stripe Form
+// Total = (2 × $20) + $5 = $45
+```
+
+**Merchandise Purchase**:
+```javascript
+// Step 1: Merchandise Modal
+// User clicks T-shirt
+
+// Step 2: Payment Method Modal
+ctx.kind = 'merchandise';
+ctx.merchPrice = 25;
+ctx.merchItem = 'tshirt';
+
+// Step 3: Stripe Form (or Cash Instructions)
+// Shows: "Purchase 👕 T-Shirt ($25)"
+```
+
+**Membership Purchase**:
+```javascript
+// Step 1: Purchase Type Modal
+// User clicks Membership
+
+// Step 2: Tier Selection
+ctx.kind = 'membership';
+ctx.membershipTier = 'gold';
+
+// Step 3: Agreement Modal
+// (Context unchanged)
+
+// Step 4: Payment Method Modal
+// (Context unchanged)
+
+// Step 5: Stripe Form
+// Total = $672 (Gold tier)
+```
+
+### Context Persistence Rules
+
+⚠️ **Critical**: Context must be set **before** transitioning to modals that depend on it.
+
+**Example Bug (Fixed in v2.9.0)**:
+```javascript
+// ❌ WRONG: Cash button doesn't set context
+cashBtn.onclick = () => showCashInstructions();
+
+// ✅ CORRECT: Set context before transition
+cashBtn.onclick = () => {
+  ctx.kind = 'merchandise';
+  ctx.merchPrice = price;
+  ctx.merchItem = item;
+  showCashInstructions();
+};
+```
+
+See ROOT_CAUSE.md #0 for full details on this bug.
+
+---
+
 ## User Flows
 
 ### Critical Distinction: Two Independent Flows
@@ -402,6 +611,127 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 **Soft-link option**: After member check-in completes, optionally display "Want to purchase a class pack?" with deep-link to options page. This keeps core attendance flow fast while offering upsell without forcing navigation.
 
 **Important**: If modifying either flow, update this section to maintain explicit distinction.
+
+---
+
+### Drop-In Purchase Flow Variants (v2.9.0)
+
+The drop-in flow now has **three distinct purchase paths** that branch from the main options page:
+
+#### 1. Class Purchase Flow (with Tips)
+
+```
+Buy Classes or Membership Button
+  ↓
+Purchase Type Modal
+  ├─→ Group Classes
+  │     ↓
+  │   Payment Method Modal
+  │     ├─→ Card
+  │     │     ↓
+  │     │   Tip Selection Modal ($0/$2/$5/$10/Custom)
+  │     │     ↓
+  │     │   Stripe Form (total = classes + tip)
+  │     │     ↓
+  │     │   Payment Success
+  │     │
+  │     └─→ Cash
+  │           ↓
+  │         Cash Instructions Modal
+  │           ├─→ OK (complete)
+  │           └─→ Pay with Card Instead → Stripe Form
+  │
+  └─→ Unlimited Membership
+        ↓
+      Tier Selection (Gold/Silver)
+        ↓
+      Agreement Modal (checkboxes)
+        ↓
+      Stripe Form (no tips on memberships)
+        ↓
+      Payment Success
+```
+
+**Key Features**:
+- Tip selection only appears for class purchases (not memberships)
+- Real-time total display: `$20 × quantity + tip`
+- Friendly messaging: "Support our instructors & studio (100% optional)"
+- Cash flow allows switching to card payment
+
+#### 2. Merchandise Purchase Flow
+
+```
+Shop Dance Gear & T-Shirts Button (shows when check-in unavailable)
+  ↓
+Merchandise Selection Modal
+  ├─→ T-Shirt ($25)
+  └─→ Beanie ($15)
+      ↓
+    Payment Method Modal
+      ├─→ Card
+      │     ↓
+      │   Stripe Form ("Purchase 👕 T-Shirt ($25)")
+      │     ↓
+      │   Payment Success
+      │
+      └─→ Cash
+            ↓
+          Cash Instructions Modal
+            ├─→ OK (complete)
+            └─→ Pay with Card Instead → Stripe Form
+```
+
+**Key Features**:
+- Dynamic button: Replaces check-in when free class unavailable
+- Shows "Next free class: Monday at 6:30 PM" info
+- No quantity selector (single item purchases)
+- No tips on merchandise
+- Context persists through cash→card transition
+
+#### 3. Check-In Upsell Flow
+
+```
+Check in for FREE Salsa Basics Button (Mon < 6:45 PM only)
+  ↓
+Check-in Success (animated checkmark + confetti)
+  ↓
+Upsell Prompt Modal: "Want to stay for the next class?"
+  ├─→ Yes, Buy Next Class
+  │     ↓
+  │   Payment Method Modal
+  │     ├─→ Card → Tip Selection → Stripe Form
+  │     └─→ Cash → Cash Instructions
+  │
+  └─→ No Thanks → Return to Home
+```
+
+**Key Features**:
+- Time-aware: Only shows Mon before 6:45 PM
+- Smooth transition: Check-in success → upsell prompt (800ms delay)
+- Single class purchase (no quantity selector)
+- Includes tip flow if card payment selected
+
+#### Dynamic Button Logic
+
+**Check-in Button Visibility**:
+```javascript
+function isSalsaBasicsAvailable() {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const currentTime = hour * 60 + minute;
+  
+  const isSalsaDay = dayOfWeek === 1; // Monday
+  const classEndTime = 18 * 60 + 45;  // 6:45 PM
+  
+  return isSalsaDay && currentTime < classEndTime;
+}
+```
+
+**Button Rendering**:
+- **Monday < 6:45 PM**: Shows "Check in for FREE 6:30 Salsa Basics" (gold gradient)
+- **All other times**: Shows "🎽 Shop Dance Gear & T-Shirts" (gold outline) + next class info
 
 ---
 
@@ -592,6 +922,51 @@ All special characters must be properly UTF-8 encoded to avoid display corruptio
 - Custom domain: `tablet.msbdance.com`
 - Environment variables: Stripe live keys
 - Git remote: `prod`
+
+---
+
+## Webhook Integrations
+
+### GHL Purchase Webhook (v2.9.1)
+
+All purchases (classes, merchandise, memberships) send notifications to GoHighLevel for CRM tracking.
+
+**Webhook URL**: `GHL_PURCHASE_WEBHOOK_URL` constant in `options.html`
+
+**Function**: `sendGHLPurchase({phone, name, product, quantity, paymentMethod})`
+
+**Parameters Sent**:
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `phone` | string | Customer phone (normalized) | `6019551234` |
+| `name` | string | Customer name | `John Doe` |
+| `product` | string | Product name | `Dance Class`, `T-Shirt`, `Beanie`, `Gold Membership`, `Silver Membership` |
+| `quantity` | number | Quantity purchased | `2` (for classes), `1` (for merchandise/membership) |
+| `payment_method` | string | Payment type | `card` or `cash` |
+| `src` | string | Source identifier | `tablet` |
+| `ts` | number | Unix timestamp | `1696780800000` |
+
+**Integration Points**:
+1. **Card Payments**: Called in `handlePaymentResult()` when `status === 'succeeded'`
+2. **Cash Payments**: Called in cash OK button handler before redirect
+
+**Implementation**:
+```javascript
+function sendGHLPurchase({phone, name, product, quantity, paymentMethod}) {
+  const params = new URLSearchParams({
+    phone, name, product, quantity, payment_method: paymentMethod, src: 'tablet', ts: Date.now()
+  });
+  const webhookUrl = `${GHL_PURCHASE_WEBHOOK_URL}?${params.toString()}`;
+  new Image().src = webhookUrl; // Fire-and-forget
+}
+```
+
+**Product Name Mapping**:
+- `ctx.kind === 'single'` → `"Dance Class"` (uses `quantity` from selector)
+- `ctx.kind === 'membership'` → `"Gold Membership"` or `"Silver Membership"` (based on `ctx.membershipTier`)
+- `ctx.kind === 'merchandise'` → `"T-Shirt"` or `"Beanie"` (based on `ctx.merchItem`)
+
+**Reliability**: Uses Image pixel technique for fire-and-forget reliability (no CORS issues, works even if webhook endpoint slow)
 
 ---
 
