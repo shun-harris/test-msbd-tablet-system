@@ -28,5 +28,26 @@
                 "tooltip": "Push to Production Environment"
             }
         ]
+    },
+    // PERFORMANCE FIXES - Exclude folders from file watching
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/dist/**": true,
+        "**/backups/**": true,
+        "**/.tmp.driveupload/**": true,
+        "**/*.sqlite": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/backups": true,
+        "**/.tmp.driveupload": true,
+        "**/*.sqlite": true
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.tmp.driveupload": true
     }
 }
