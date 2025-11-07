@@ -1,23 +1,60 @@
-# CRM Integration
+# Check-In Tablet ↔ CRM Integration
 
-This tablet system integrates with **MyDanceDesk** (a customized Twenty CRM) to sync member data, check-ins, and purchases.
+This tablet system integrates with **MyDanceDesk CRM** to sync check-ins and payments in real-time.
 
 ## 🔗 Related Project
 
-**MyDanceDesk**: `C:\Users\Shun Harris\Documents\MyDanceDesk`
+**MyDanceDesk CRM**: `C:\Users\Shun Harris\Documents\MyDanceDesk`
 
-The CRM is a separate project built on Twenty open-source platform, customized for dance studio operations.
+## 🎯 What Gets Synced
 
-## 📚 CRM Documentation
+### Check-Ins
+- Customer information (name, phone, email)
+- Class attended
+- Check-in timestamp
+- Payment info (if paid during check-in)
 
-All CRM-related documentation is maintained in the CRM repository:
-- Setup Guide
-- Customization Reference
-- API Integration Examples
+### Payments
+- Customer information
+- Payment amount and method
+- Stripe payment ID (for card payments)
+- Payment description and metadata
 
-See: `C:\Users\Shun Harris\Documents\MyDanceDesk\docs\`
+## ⚙️ Setup Instructions
 
-## 🔌 Integration Points
+### 1. Configure CRM Webhook URL
+
+Add to your tablet system `.env` file:
+
+```bash
+# For testing
+CRM_WEBHOOK_URL=https://test.mydancedesk.com/api/webhooks/tablet
+
+# For production
+CRM_WEBHOOK_URL=https://crm.msbdance.com/api/webhooks/tablet
+```
+
+### 2. Add Webhook Calls to Your Code
+
+```javascript
+const { sendCheckInToCRM } = require('./crm-webhook');
+
+// After successful check-in + payment
+await sendCheckInToCRM({
+    phone: customer.phone,
+    email: customer.email,
+    first_name: customer.first_name,
+    last_name: customer.last_name,
+    class_name: selectedClass.name,
+    checked_in_at: new Date().toISOString(),
+    payment_amount: 20.00,
+    payment_method: 'CARD',
+    stripe_payment_id: paymentIntent.id,
+    notes: 'Walk-in payment'
+});
+```
+
+## 🔌 Available Webhook Endpoints
 
 ### From Tablet → CRM
 
