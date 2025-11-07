@@ -4,6 +4,7 @@ const cors = require("cors");
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const sqlite3 = require('sqlite3').verbose();
+const { sendCheckInToCRM, sendPaymentToCRM } = require('./crm-webhook');
 
 // ================= Environment Detection & Logging =================
 function detectEnvironment(req){
@@ -446,6 +447,32 @@ app.post("/create-payment-intent", async (req, res) => {
         console.log("✅ Payment intent created successfully:", paymentIntent.id);
         console.log("📊 Payment status:", paymentIntent.status);
 
+        // Send payment to CRM (async, non-blocking)
+        if (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture') {
+            setImmediate(async () => {
+                try {
+                    await sendPaymentToCRM({
+                        phone,
+                        email,
+                        first_name: name?.split(' ')[0] || 'Guest',
+                        last_name: name?.split(' ').slice(1).join(' ') || '',
+                        amount: amount / 100, // Convert cents to dollars
+                        currency: currency || 'USD',
+                        method: 'CARD',
+                        stripe_payment_id: paymentIntent.id,
+                        stripe_customer_id: customer?.id,
+                        description: description || 'Drop-in payment from tablet',
+                        metadata: {
+                            source: 'tablet',
+                            environment: environment
+                        }
+                    });
+                } catch (err) {
+                    console.error('Failed to sync payment to CRM:', err.message);
+                }
+            });
+        }
+
         res.send({
             clientSecret: paymentIntent.client_secret,
             environment: environment,
@@ -454,6 +481,54 @@ app.post("/create-payment-intent", async (req, res) => {
     } catch (error) {
         console.error("Payment error:", error);
         res.status(500).send({ error: error.message });
+    }
+});
+
+// Member check-in endpoint (records check-in to CRM)
+app.post("/member-check-in", async (req, res) => {
+    console.log("👤 Member check-in request:", req.body);
+    try {
+        const { phone, email, first_name, last_name, classes, payment_amount, payment_method, stripe_payment_id } = req.body;
+
+        if (!phone && !email) {
+            return res.status(400).json({ error: 'Phone or email required' });
+        }
+
+        if (!classes || classes.length === 0) {
+            return res.status(400).json({ error: 'At least one class required' });
+        }
+
+        // Send each class check-in to CRM
+        const results = [];
+        for (const className of classes) {
+            // Map "Salsa Basics - Free" to "Salsa Basics" for CRM
+            const normalizedClassName = className.replace(/\s*-\s*Free$/i, '').trim();
+            
+            const crmResult = await sendCheckInToCRM({
+                phone,
+                email,
+                first_name: first_name || 'Member',
+                last_name: last_name || '',
+                class_name: normalizedClassName,
+                checked_in_at: new Date().toISOString(),
+                payment_amount: payment_amount || 0,
+                payment_method: payment_method || 'MEMBER',
+                stripe_payment_id: stripe_payment_id || null,
+                notes: `Member check-in from tablet${className.includes('Free') ? ' - Free class' : ''}`
+            });
+            
+            results.push({ class: className, synced: crmResult.success });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Check-ins recorded',
+            results 
+        });
+
+    } catch (error) {
+        console.error("Member check-in error:", error);
+        res.status(500).json({ error: error.message });
     }
 });
 

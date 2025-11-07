@@ -522,41 +522,64 @@
   const GHL_WEBHOOK_MEMBER_URL =
     "https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/73c401de-04b7-477b-b7c6-8efa0792a5a3";
 
-  function sendGHLMemberCheckin({ phone, name, classes }) {
-    if (!GHL_WEBHOOK_MEMBER_URL || !phone) return;
+  async function sendGHLMemberCheckin({ phone, name, classes }) {
+    // Send to GHL (existing integration)
+    if (GHL_WEBHOOK_MEMBER_URL && phone) {
+      const qp = new URLSearchParams();
+      qp.set("evt", "member_checkin");
+      qp.set("phone", String(phone).replace(/\D/g,"").slice(-10));
+      if (name) qp.set("name", name);
 
-    const qp = new URLSearchParams();
-    qp.set("evt", "member_checkin");
-    qp.set("phone", String(phone).replace(/\D/g,"").slice(-10));
-    if (name) qp.set("name", name);
+      // Always send class1..class5
+      const arr = Array.isArray(classes) ? classes.slice(0, 5) : [];
+      while (arr.length < 5) arr.push("");
+      for (let i = 0; i < 5; i++) qp.set(`class${i+1}`, arr[i]);
 
-    // Always send class1..class5
-    const arr = Array.isArray(classes) ? classes.slice(0, 5) : [];
-    while (arr.length < 5) arr.push("");
-    for (let i = 0; i < 5; i++) qp.set(`class${i+1}`, arr[i]);
+      // Extras
+      qp.set("classCount", String((classes || []).length));
+      qp.set("classesCsv", (classes || []).join(", "));
+      qp.set("ts", String(Date.now()));
 
-    // Extras
-    qp.set("classCount", String((classes || []).length));
-    qp.set("classesCsv", (classes || []).join(", "));
-    qp.set("ts", String(Date.now()));
-
-    let sent = false;
-    try {
-      if (navigator.sendBeacon) {
-        const body = new URLSearchParams(qp);
-        sent = navigator.sendBeacon(GHL_WEBHOOK_MEMBER_URL, body);
-      }
-    } catch (_) {}
-
-    if (!sent) {
+      let sent = false;
       try {
-        const img = new Image();
-        img.referrerPolicy = "no-referrer";
-        img.src = `${GHL_WEBHOOK_MEMBER_URL}?${qp.toString()}`;
+        if (navigator.sendBeacon) {
+          const body = new URLSearchParams(qp);
+          sent = navigator.sendBeacon(GHL_WEBHOOK_MEMBER_URL, body);
+        }
       } catch (_) {}
+
+      if (!sent) {
+        try {
+          const img = new Image();
+          img.referrerPolicy = "no-referrer";
+          img.src = `${GHL_WEBHOOK_MEMBER_URL}?${qp.toString()}`;
+        } catch (_) {}
+      }
+
+      try { if (typeof DEV !== "undefined" && DEV) console.log("[GHL] Sent member check-in", Object.fromEntries(qp)); } catch (_){}
     }
 
-    try { if (typeof DEV !== "undefined" && DEV) console.log("[GHL] Sent member check-in", Object.fromEntries(qp)); } catch (_){}
+    // Also send to CRM (new integration)
+    try {
+      const nameParts = (name || 'Member').split(' ');
+      const response = await fetch('/member-check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: String(phone).replace(/\D/g,"").slice(-10),
+          first_name: nameParts[0] || 'Member',
+          last_name: nameParts.slice(1).join(' ') || '',
+          classes: classes || []
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        try { if (typeof DEV !== "undefined" && DEV) console.log("[CRM] Check-in synced", result); } catch (_){}
+      }
+    } catch (crmError) {
+      console.warn("[CRM] Failed to sync check-in (continuing anyway):", crmError);
+    }
   }
 
 
@@ -1134,6 +1157,10 @@
         if (hasError) return;
 
         const webhookUrl = "https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/d94d472b-aaf4-478a-83f6-b55375fd7258";
+        const crmWebhookUrl = window.location.hostname.includes('test.') 
+          ? "https://test.mydancedesk.com/api/webhooks/tablet/check-in"
+          : "https://crm.msbdance.com/api/webhooks/tablet/check-in";
+        
         const payload = {
           phone: d,
           firstName: firstName.value.trim(),
@@ -1142,11 +1169,29 @@
         };
 
         try {
+          // Send to GHL (existing integration)
           await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
+          
+          // Also send to CRM (new integration)
+          try {
+            await fetch(crmWebhookUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                phone: d,
+                first_name: firstName.value.trim(),
+                last_name: lastName.value.trim(),
+                email: email.value.trim(),
+                notes: 'New user signup from tablet'
+              })
+            });
+          } catch (crmError) {
+            console.warn("Failed to sync to CRM (continuing anyway):", crmError);
+          }
         } catch (error) {
           console.error("Failed to send data to webhook", error);
           alert("There was an error adding you to the system. Please try again.");
