@@ -389,8 +389,10 @@ app.get("/lookup/member", async (req, res) => {
             contact_type: contact.contact_type
         });
         
-        // Verify member status
-        const isMember = contact.membership_status === 'ACTIVE' || contact.contact_type === 'member';
+        // Verify member status (case-insensitive)
+        const membershipStatus = (contact.membership_status || '').toUpperCase();
+        const contactType = (contact.contact_type || '').toLowerCase();
+        const isMember = membershipStatus === 'ACTIVE' || contactType === 'member';
         console.log(`🎫 Is member?`, isMember, `(status=${contact.membership_status}, type=${contact.contact_type})`);
         
         if (!isMember) {
