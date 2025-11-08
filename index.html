@@ -1402,7 +1402,6 @@
     };
 
     /* =============================== [SECTION: MEMBER VERIFY – TOGGLE BETWEEN GHL/CRM] =============================== */
-    const CRM_API_URL = "https://test.mydancedesk.com"; // Change to prod when ready
     
     async function verifyMember(phone, { timeoutMs = 8000 } = {}){
       try{
@@ -1465,12 +1464,14 @@
       }catch(_){ return { exists:false }; }
     }
     
-    // CRM lookup via MyDanceDesk API
+    // CRM lookup via tablet's own PostgreSQL database
     async function verifyViaCRM(phone, product, timeoutMs = 8000){
       try{
-        const u = new URL(`${CRM_API_URL}/api/contacts/lookup`);
+        // Map product to correct endpoint
+        const endpoint = product === 'checkmember' ? '/lookup/member' : '/lookup/drop-in';
+        const u = new URL(endpoint, window.location.origin);
         u.searchParams.set("phone", phone);
-        u.searchParams.set("product", product);
+        
         const ctrl = new AbortController();
         const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
         const resp = await fetch(u.toString(), { method:"GET", signal: ctrl.signal, cache:"no-store" });
@@ -1478,7 +1479,7 @@
         if(!resp.ok) return { exists:false };
         const data = await resp.json();
         
-        // CRM returns same format as GHL
+        // Same format as GHL/Make.com
         const exists = data.exists === true || data.ok === true;
         const name = data.name || `${data.firstName||''} ${data.lastName||''}`.trim();
         const classesTaken = Number(data.classesTaken || data.classCount || 0) || 0;

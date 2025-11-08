@@ -4,7 +4,20 @@ const cors = require("cors");
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const { sendCheckInToCRM, sendPaymentToCRM } = require('./crm-webhook');
+
+// ================= PostgreSQL Connection (Shared CRM Database) =================
+let pgPool = null;
+if (process.env.DATABASE_URL) {
+    pgPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL.includes('railway.app') ? { rejectUnauthorized: false } : false
+    });
+    console.log('✅ PostgreSQL connection pool initialized (shared CRM database)');
+} else {
+    console.warn('⚠️  DATABASE_URL not set - contact lookup will not work');
+}
 
 // ================= Environment Detection & Logging =================
 function detectEnvironment(req){
@@ -275,6 +288,145 @@ app.get("/test/environment", (req, res) => {
         timestamp: new Date().toISOString(),
         version: 'v' + (VERSION_INFO.version || '0.0.0')
     });
+});
+
+// ================= Contact Lookup Endpoints (Direct PostgreSQL) =================
+// Member lookup - checks if phone/email belongs to active member
+app.get("/lookup/member", async (req, res) => {
+    if (!pgPool) {
+        return res.status(503).json({ 
+            exists: false, 
+            error: 'Database not configured' 
+        });
+    }
+
+    try {
+        const { phone, email } = req.query;
+        
+        // Normalize phone to last 10 digits
+        const normalizedPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : null;
+        
+        let contact = null;
+        
+        // Try phone lookup first
+        if (normalizedPhone) {
+            const phoneResult = await pgPool.query(
+                'SELECT * FROM contacts WHERE phone = $1',
+                [normalizedPhone]
+            );
+            contact = phoneResult.rows[0];
+        }
+        
+        // Fallback to email lookup
+        if (!contact && email) {
+            const emailResult = await pgPool.query(
+                'SELECT * FROM contacts WHERE LOWER(email) = LOWER($1)',
+                [email]
+            );
+            contact = emailResult.rows[0];
+        }
+        
+        // No contact found
+        if (!contact) {
+            return res.json({ exists: false });
+        }
+        
+        // Verify member status
+        const isMember = contact.membership_status === 'ACTIVE' || contact.contact_type === 'member';
+        if (!isMember) {
+            return res.json({ exists: false });
+        }
+        
+        // Count classes taken
+        const classCountResult = await pgPool.query(
+            'SELECT COUNT(*) as count FROM attendance_calendar WHERE contact_id = $1',
+            [contact.id]
+        );
+        const classesTaken = parseInt(classCountResult.rows[0]?.count || 0);
+        
+        // Return Make.com compatible format
+        return res.json({
+            result: 'yes',
+            exists: true,
+            ok: true,
+            name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.name,
+            firstName: contact.first_name,
+            lastName: contact.last_name,
+            email: contact.email,
+            classesTaken,
+            contactType: contact.contact_type
+        });
+        
+    } catch (error) {
+        console.error('Member lookup error:', error);
+        return res.json({ exists: false });
+    }
+});
+
+// Drop-in lookup - checks if phone/email exists (any contact type)
+app.get("/lookup/drop-in", async (req, res) => {
+    if (!pgPool) {
+        return res.status(503).json({ 
+            exists: false, 
+            error: 'Database not configured' 
+        });
+    }
+
+    try {
+        const { phone, email } = req.query;
+        
+        // Normalize phone to last 10 digits
+        const normalizedPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : null;
+        
+        let contact = null;
+        
+        // Try phone lookup first
+        if (normalizedPhone) {
+            const phoneResult = await pgPool.query(
+                'SELECT * FROM contacts WHERE phone = $1',
+                [normalizedPhone]
+            );
+            contact = phoneResult.rows[0];
+        }
+        
+        // Fallback to email lookup
+        if (!contact && email) {
+            const emailResult = await pgPool.query(
+                'SELECT * FROM contacts WHERE LOWER(email) = LOWER($1)',
+                [email]
+            );
+            contact = emailResult.rows[0];
+        }
+        
+        // No contact found
+        if (!contact) {
+            return res.json({ exists: false });
+        }
+        
+        // Count classes taken
+        const classCountResult = await pgPool.query(
+            'SELECT COUNT(*) as count FROM attendance_calendar WHERE contact_id = $1',
+            [contact.id]
+        );
+        const classesTaken = parseInt(classCountResult.rows[0]?.count || 0);
+        
+        // Return Make.com compatible format
+        return res.json({
+            result: 'yes',
+            exists: true,
+            ok: true,
+            name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.name,
+            firstName: contact.first_name,
+            lastName: contact.last_name,
+            email: contact.email,
+            classesTaken,
+            contactType: contact.contact_type
+        });
+        
+    } catch (error) {
+        console.error('Drop-in lookup error:', error);
+        return res.json({ exists: false });
+    }
 });
 
 // Stripe payment endpoint
