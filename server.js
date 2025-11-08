@@ -389,24 +389,25 @@ app.get("/lookup/member", async (req, res) => {
             contact_type: contact.contact_type
         });
         
-        // Count classes taken first
+        // Verify member status - check contact_type field
+        const contactType = (contact.contact_type || '').toLowerCase();
+        const isMember = contactType === 'member';
+        console.log(`🎫 Is member?`, isMember, `(contact_type=${contact.contact_type})`);
+        
+        if (!isMember) {
+            console.log(`❌ Contact exists but contact_type is not 'member'`);
+            return res.json({ exists: false });
+        }
+        
+        // Count classes taken (check both contact_id formats - with and without dashes)
         console.log(`📊 Counting attendance for contact_id=${contact.id}`);
         const classCountResult = await pgPool.query(
-            'SELECT COUNT(*) as count FROM attendance_calendar WHERE contact_id = $1',
-            [contact.id]
+            `SELECT COUNT(*) as count FROM attendance_calendar 
+             WHERE contact_id = $1 OR contact_id = $2`,
+            [contact.id, contact.id.replace(/-/g, '')]
         );
         const classesTaken = parseInt(classCountResult.rows[0]?.count || 0);
         console.log(`📈 Classes taken: ${classesTaken}`);
-        
-        // Verify member status - check membership_status field (set by Contact Type dropdown)
-        const membershipStatus = (contact.membership_status || '').toUpperCase();
-        const isMember = membershipStatus === 'MEMBER' || membershipStatus === 'ACTIVE';
-        console.log(`🎫 Is member?`, isMember, `(membership_status=${contact.membership_status})`);
-        
-        if (!isMember) {
-            console.log(`❌ Contact exists but membership_status is not MEMBER or ACTIVE`);
-            return res.json({ exists: false });
-        }
         
         // Return Make.com compatible format
         const response = {
