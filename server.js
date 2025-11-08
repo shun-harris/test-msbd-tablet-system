@@ -352,10 +352,10 @@ app.get("/lookup/member", async (req, res) => {
         // Try phone lookup first - handle multiple formats (+1, without +1, etc.)
         if (normalizedPhone) {
             console.log(`📲 Querying by phone: ${normalizedPhone} (also trying +1${normalizedPhone})`);
-            // Match phone numbers in various formats: 6123617155, +16123617155, +1-612-361-7155, etc.
+            // Match phone numbers - strip non-digits and compare last 10 digits
             const phoneResult = await pgPool.query(
                 `SELECT * FROM contacts 
-                 WHERE REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE '%' || $1`,
+                 WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = $1`,
                 [normalizedPhone]
             );
             contact = phoneResult.rows[0];
@@ -460,10 +460,10 @@ app.get("/lookup/drop-in", async (req, res) => {
         // Try phone lookup first - handle multiple formats (+1, without +1, etc.)
         if (normalizedPhone) {
             console.log(`📲 Querying by phone: ${normalizedPhone} (also trying +1${normalizedPhone})`);
-            // Match phone numbers in various formats: 6123617155, +16123617155, +1-612-361-7155, etc.
+            // Match phone numbers - strip non-digits and compare last 10 digits
             const phoneResult = await pgPool.query(
                 `SELECT * FROM contacts 
-                 WHERE REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE '%' || $1`,
+                 WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = $1`,
                 [normalizedPhone]
             );
             contact = phoneResult.rows[0];
