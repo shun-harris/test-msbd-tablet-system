@@ -704,6 +704,58 @@
     }
   }
 
+  // CRM lookup via tablet's own PostgreSQL database
+  async function verifyViaCRM(phone, product, timeoutMs = 8000){
+    try{
+      // Map product to correct endpoint
+      const endpoint = product === 'checkmember' ? '/lookup/member' : '/lookup/drop-in';
+      const u = new URL(endpoint, window.location.origin);
+      u.searchParams.set("phone", phone);
+      
+      console.log(`🔍 CRM Lookup Starting:`, {
+        product,
+        phone,
+        endpoint,
+        fullUrl: u.toString(),
+        origin: window.location.origin
+      });
+      
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
+      
+      const resp = await fetch(u.toString(), { method:"GET", signal: ctrl.signal, cache:"no-store" });
+      clearTimeout(to);
+      
+      console.log(`📡 CRM Response:`, {
+        status: resp.status,
+        statusText: resp.statusText,
+        ok: resp.ok,
+        url: resp.url
+      });
+      
+      if(!resp.ok) {
+        console.error(`❌ CRM lookup failed: ${resp.status} ${resp.statusText}`);
+        return { exists:false };
+      }
+      
+      const data = await resp.json();
+      console.log(`✅ CRM Data received:`, data);
+      
+      // Same format as GHL/Make.com
+      const exists = data.exists === true || data.ok === true;
+      const name = data.name || `${data.firstName||''} ${data.lastName||''}`.trim();
+      const classesTaken = Number(data.classesTaken || data.classCount || 0) || 0;
+      
+      const result = { exists, name, firstName: data.firstName, lastName: data.lastName, email: data.email, classesTaken };
+      console.log(`🎯 CRM Final result:`, result);
+      
+      return result;
+    }catch(err){ 
+      console.error(`💥 CRM lookup exception:`, err);
+      return { exists:false }; 
+    }
+  }
+
 
   /* =============================== [SECTION: RIPPLE + ACTION DELAY] (rarely changes) =============================== */
   let rippleBlockUntil = 0;
@@ -1481,58 +1533,6 @@
         const classesTaken = Number((data && (data.classesTaken ?? data.classcount ?? data.classCount)) || 0) || 0;
         return { exists, name: nameInfo.name, classesTaken };
       }catch(_){ return { exists:false }; }
-    }
-    
-    // CRM lookup via tablet's own PostgreSQL database
-    async function verifyViaCRM(phone, product, timeoutMs = 8000){
-      try{
-        // Map product to correct endpoint
-        const endpoint = product === 'checkmember' ? '/lookup/member' : '/lookup/drop-in';
-        const u = new URL(endpoint, window.location.origin);
-        u.searchParams.set("phone", phone);
-        
-        console.log(`🔍 CRM Lookup Starting:`, {
-          product,
-          phone,
-          endpoint,
-          fullUrl: u.toString(),
-          origin: window.location.origin
-        });
-        
-        const ctrl = new AbortController();
-        const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
-        
-        const resp = await fetch(u.toString(), { method:"GET", signal: ctrl.signal, cache:"no-store" });
-        clearTimeout(to);
-        
-        console.log(`📡 CRM Response:`, {
-          status: resp.status,
-          statusText: resp.statusText,
-          ok: resp.ok,
-          url: resp.url
-        });
-        
-        if(!resp.ok) {
-          console.error(`❌ CRM lookup failed: ${resp.status} ${resp.statusText}`);
-          return { exists:false };
-        }
-        
-        const data = await resp.json();
-        console.log(`✅ CRM Data received:`, data);
-        
-        // Same format as GHL/Make.com
-        const exists = data.exists === true || data.ok === true;
-        const name = data.name || `${data.firstName||''} ${data.lastName||''}`.trim();
-        const classesTaken = Number(data.classesTaken || data.classCount || 0) || 0;
-        
-        const result = { exists, name, firstName: data.firstName, lastName: data.lastName, email: data.email, classesTaken };
-        console.log(`🎯 CRM Final result:`, result);
-        
-        return result;
-      }catch(err){ 
-        console.error(`💥 CRM lookup exception:`, err);
-        return { exists:false }; 
-      }
     }
 
     // NEXT from member keypad → use Make.com
