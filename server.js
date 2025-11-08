@@ -389,13 +389,13 @@ app.get("/lookup/member", async (req, res) => {
             contact_type: contact.contact_type
         });
         
-        // Verify member status - check contact_type field
+        // Verify member status - use contact_type consistently
         const contactType = (contact.contact_type || '').toLowerCase();
         const isMember = contactType === 'member';
         console.log(`🎫 Is member?`, isMember, `(contact_type=${contact.contact_type})`);
         
         if (!isMember) {
-            console.log(`❌ Contact exists but contact_type is not 'member'`);
+            console.log(`❌ Contact exists but contact_type is not 'member' (value: ${contact.contact_type})`);
             return res.json({ exists: false });
         }
         
