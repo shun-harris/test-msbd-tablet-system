@@ -290,6 +290,39 @@ app.get("/test/environment", (req, res) => {
     });
 });
 
+// Database test endpoint
+app.get("/test/database", async (req, res) => {
+    console.log(`\n🔍 ===== DATABASE TEST =====`);
+    console.log(`DATABASE_URL set:`, !!process.env.DATABASE_URL);
+    console.log(`pgPool exists:`, !!pgPool);
+    
+    if (!pgPool) {
+        return res.json({
+            ok: false,
+            error: 'PostgreSQL pool not initialized',
+            databaseUrl: !!process.env.DATABASE_URL
+        });
+    }
+    
+    try {
+        const result = await pgPool.query('SELECT NOW() as current_time, COUNT(*) as contact_count FROM contacts');
+        console.log(`✅ Database query successful:`, result.rows[0]);
+        res.json({
+            ok: true,
+            currentTime: result.rows[0].current_time,
+            contactCount: result.rows[0].contact_count,
+            message: 'Database connection working!'
+        });
+    } catch (error) {
+        console.error(`❌ Database test failed:`, error);
+        res.json({
+            ok: false,
+            error: error.message,
+            databaseUrl: !!process.env.DATABASE_URL
+        });
+    }
+});
+
 // ================= Contact Lookup Endpoints (Direct PostgreSQL) =================
 // Member lookup - checks if phone/email belongs to active member
 app.get("/lookup/member", async (req, res) => {
