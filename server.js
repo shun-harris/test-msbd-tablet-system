@@ -492,14 +492,9 @@ app.get("/lookup/drop-in", async (req, res) => {
             contact_type: contact.contact_type
         });
         
-        // Count classes taken
-        console.log(`📊 Counting attendance for contact_id=${contact.id}`);
-        const classCountResult = await pgPool.query(
-            'SELECT COUNT(*) as count FROM attendance_calendar WHERE contact_id = $1',
-            [contact.id]
-        );
-        const classesTaken = parseInt(classCountResult.rows[0]?.count || 0);
-        console.log(`📈 Classes taken: ${classesTaken}`);
+        // Get classes taken from contact record (stored in total_classes column)
+        const classesTaken = parseInt(contact.total_classes || 0);
+        console.log(`📈 Classes taken: ${classesTaken} (from contacts.total_classes)`);
         
         // Return Make.com compatible format
         const response = {
