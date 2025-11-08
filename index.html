@@ -616,18 +616,43 @@
     return result;
   }
 
-  // Uses Make.com to verify if a phone is an existing drop-in. Returns {exists, name, firstName, lastName}
+  // Verify drop-in - toggles between GHL and CRM
   const MAKE_WEBHOOK_URL = "https://hook.us1.make.com/7o1igxij7s24myaep5mtc5k6fvxunqh8";
+  
   async function verifyDropIn(phone, { timeoutMs = 8000 } = {}){
     try {
       const d = String(phone||"").replace(/\D/g, "").slice(-10);
       if (d.length !== 10) return { exists:false };
-
+      
+      const lookupSource = localStorage.getItem('contactLookupSource') || 'ghl';
+      
+      // Try CRM first if source is 'crm' or 'both'
+      if (lookupSource === 'crm' || lookupSource === 'both') {
+        try {
+          const crmResult = await verifyViaCRM(d, 'checkdrop', timeoutMs);
+          if (crmResult.exists) return crmResult; // Found in CRM
+          if (lookupSource === 'crm') return { exists: false }; // CRM-only mode, not found
+        } catch (err) {
+          if (lookupSource === 'crm') return { exists: false }; // CRM-only mode failed
+          // Fall through to GHL for 'both' mode
+        }
+      }
+      
+      // Use GHL (Make.com) if source is 'ghl' or fallback from 'both'
+      return await verifyViaGHLDropIn(d, timeoutMs);
+    } catch (err) {
+      try { if (typeof DEV !== 'undefined' && DEV) console.error("[DROP] verify error", err); } catch(_){ }
+      return { exists:false };
+    }
+  }
+  
+  // Original GHL drop-in logic
+  async function verifyViaGHLDropIn(phone, timeoutMs = 8000){
+    try {
       const u = new URL(MAKE_WEBHOOK_URL);
       u.searchParams.set("product", "checkdrop");
-      u.searchParams.set("phone", d);
+      u.searchParams.set("phone", phone);
 
-      // Debug
       try { if (typeof DEV !== "undefined" && DEV) console.log("[DROP] →", u.toString()); } catch(_){ }
 
       const ctrl = new AbortController();
@@ -637,7 +662,7 @@
       clearTimeout(to);
 
       if (!resp.ok) {
-        try { if (DEV) console.warn("[DROP] non-200", resp.status); } catch(_){ }
+        try { if (typeof DEV !== "undefined" && DEV) console.warn("[DROP] non-200", resp.status); } catch(_){ }
         return { exists:false };
       }
 
@@ -653,10 +678,9 @@
       const exists = !!(data && (data.result === "yes" || data.ok === true));
       const { name, firstName, lastName } = extractNameDeep(data);
       const email = data.email || "";
-      try { if (DEV) console.log("[DROP] resp", data, "→ exists:", exists, "name:", name, firstName, lastName, "email:", email); } catch(_){ }
+      try { if (typeof DEV !== "undefined" && DEV) console.log("[DROP] resp", data, "→ exists:", exists, "name:", name, firstName, lastName, "email:", email); } catch(_){ }
       return { exists, name, firstName, lastName, email };
     } catch (err) {
-      try { if (DEV) console.error("[DROP] verify error", err); } catch(_){ }
       return { exists:false };
     }
   }
@@ -866,6 +890,20 @@
                 <div style="margin-top:12px;text-align:center">
                   <button id="debugToggle" style="padding:8px 16px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600">Debug: <span id="debugStatus">OFF</span></button>
                 </div>
+              </div>
+
+              <!-- Contact Lookup Toggle -->
+              <div class="admin-section">
+                <h4 style="margin:4px 0 6px;color:#eee;text-align:center">Contact Lookup</h4>
+                <p style="font-size:11px;color:#999;text-align:center;margin:0 0 10px">Choose where to check contacts</p>
+                <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                  <button id="lookupGHL" class="lookup-btn" data-source="ghl" style="flex:1;min-width:90px;padding:10px 14px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600;transition:all .2s">GHL</button>
+                  <button id="lookupCRM" class="lookup-btn" data-source="crm" style="flex:1;min-width:90px;padding:10px 14px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600;transition:all .2s">CRM</button>
+                  <button id="lookupBoth" class="lookup-btn" data-source="both" style="flex:1;min-width:90px;padding:10px 14px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600;transition:all .2s">Both</button>
+                </div>
+                <p style="font-size:10px;color:#888;text-align:center;margin:8px 0 0;line-height:1.3">
+                  <strong id="currentLookupLabel">GHL</strong>: <span id="currentLookupDesc">Uses GoHighLevel (current)</span>
+                </p>
               </div>
               
               <div class="admin-section">
@@ -1272,6 +1310,47 @@
           alert('Debug mode ' + (currentState ? 'disabled' : 'enabled') + '. Reload the page to apply changes.');
         };
       }
+
+      // Contact Lookup Toggle
+      {
+        const lookupBtns = document.querySelectorAll('.lookup-btn');
+        const currentLabel = document.getElementById('currentLookupLabel');
+        const currentDesc = document.getElementById('currentLookupDesc');
+        
+        const updateLookupUI = () => {
+          const source = localStorage.getItem('contactLookupSource') || 'ghl'; // Default to GHL
+          lookupBtns.forEach(btn => {
+            const btnSource = btn.getAttribute('data-source');
+            if (btnSource === source) {
+              btn.style.borderColor = '#d4af37';
+              btn.style.background = 'rgba(212, 175, 55, 0.15)';
+              btn.style.color = '#d4af37';
+            } else {
+              btn.style.borderColor = 'rgba(255,255,255,.2)';
+              btn.style.background = '#1d1f23';
+              btn.style.color = '#cdd0d4';
+            }
+          });
+          
+          const descriptions = {
+            ghl: 'Uses GoHighLevel (current)',
+            crm: 'Uses MyDanceDesk CRM (faster)',
+            both: 'Tries CRM first, falls back to GHL'
+          };
+          if (currentLabel) currentLabel.textContent = source.toUpperCase();
+          if (currentDesc) currentDesc.textContent = descriptions[source] || descriptions.ghl;
+        };
+        
+        updateLookupUI();
+        
+        lookupBtns.forEach(btn => {
+          btn.onclick = () => {
+            const source = btn.getAttribute('data-source');
+            localStorage.setItem('contactLookupSource', source);
+            updateLookupUI();
+          };
+        });
+      }
     }
 
     function renderScheduleEditor(){
@@ -1322,14 +1401,39 @@
       const r = await saveScheduleCloud(SCHEDULE); if(r && r.ok) setSyncBadge("ok","Synced ✓"); else setSyncBadge("bad","Offline");
     };
 
-    /* =============================== [SECTION: MEMBER VERIFY VIA MAKE.COM] =============================== */
+    /* =============================== [SECTION: MEMBER VERIFY – TOGGLE BETWEEN GHL/CRM] =============================== */
+    const CRM_API_URL = "https://test.mydancedesk.com"; // Change to prod when ready
+    
     async function verifyMember(phone, { timeoutMs = 8000 } = {}){
       try{
         const d = String(phone||"").replace(/\D/g, "").slice(-10);
         if(d.length!==10) return { exists:false };
+        
+        const lookupSource = localStorage.getItem('contactLookupSource') || 'ghl';
+        
+        // Try CRM first if source is 'crm' or 'both'
+        if (lookupSource === 'crm' || lookupSource === 'both') {
+          try {
+            const crmResult = await verifyViaCRM(d, 'checkmember', timeoutMs);
+            if (crmResult.exists) return crmResult; // Found in CRM
+            if (lookupSource === 'crm') return { exists: false }; // CRM-only mode, not found
+          } catch (err) {
+            if (lookupSource === 'crm') return { exists: false }; // CRM-only mode failed
+            // Fall through to GHL for 'both' mode
+          }
+        }
+        
+        // Use GHL (Make.com) if source is 'ghl' or fallback from 'both'
+        return await verifyViaGHL(d, 'checkmember', timeoutMs);
+      }catch(_){ return { exists:false }; }
+    }
+    
+    // GHL lookup via Make.com (original logic)
+    async function verifyViaGHL(phone, product, timeoutMs = 8000){
+      try{
         const u = new URL(MAKE_WEBHOOK_URL);
-        u.searchParams.set("product","checkmember");
-        u.searchParams.set("phone", d);
+        u.searchParams.set("product", product);
+        u.searchParams.set("phone", phone);
         const ctrl = new AbortController();
         const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
         const resp = await fetch(u.toString(), { method:"GET", signal: ctrl.signal, cache:"no-store" });
@@ -1345,7 +1449,6 @@
           catch{ data = { result:(rawText||"").trim() , _raw: rawText}; }
         }
 
-        // Determine existence robustly
         let exists = false;
         if (data) {
           const r = (typeof data.result === 'string') ? data.result.toLowerCase() : data.result;
@@ -1353,12 +1456,34 @@
         }
         if (!exists && rawText) {
           const lower = rawText.toLowerCase();
-          if (/\byes\b/.test(lower)) exists = true; // tolerate malformed text bodies that contain 'yes'
+          if (/\byes\b/.test(lower)) exists = true;
         }
 
         const nameInfo = extractNameDeep(data||{});
         const classesTaken = Number((data && (data.classesTaken ?? data.classcount ?? data.classCount)) || 0) || 0;
         return { exists, name: nameInfo.name, classesTaken };
+      }catch(_){ return { exists:false }; }
+    }
+    
+    // CRM lookup via MyDanceDesk API
+    async function verifyViaCRM(phone, product, timeoutMs = 8000){
+      try{
+        const u = new URL(`${CRM_API_URL}/api/contacts/lookup`);
+        u.searchParams.set("phone", phone);
+        u.searchParams.set("product", product);
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
+        const resp = await fetch(u.toString(), { method:"GET", signal: ctrl.signal, cache:"no-store" });
+        clearTimeout(to);
+        if(!resp.ok) return { exists:false };
+        const data = await resp.json();
+        
+        // CRM returns same format as GHL
+        const exists = data.exists === true || data.ok === true;
+        const name = data.name || `${data.firstName||''} ${data.lastName||''}`.trim();
+        const classesTaken = Number(data.classesTaken || data.classCount || 0) || 0;
+        
+        return { exists, name, firstName: data.firstName, lastName: data.lastName, email: data.email, classesTaken };
       }catch(_){ return { exists:false }; }
     }
 
