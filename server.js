@@ -399,15 +399,9 @@ app.get("/lookup/member", async (req, res) => {
             return res.json({ exists: false });
         }
         
-        // Count classes taken (check both contact_id formats - with and without dashes)
-        console.log(`📊 Counting attendance for contact_id=${contact.id}`);
-        const classCountResult = await pgPool.query(
-            `SELECT COUNT(*) as count FROM attendance_calendar 
-             WHERE contact_id = $1 OR contact_id = $2`,
-            [contact.id, contact.id.replace(/-/g, '')]
-        );
-        const classesTaken = parseInt(classCountResult.rows[0]?.count || 0);
-        console.log(`📈 Classes taken: ${classesTaken}`);
+        // Get classes taken from contact record (stored in total_classes column)
+        const classesTaken = parseInt(contact.total_classes || 0);
+        console.log(`📈 Classes taken: ${classesTaken} (from contacts.total_classes)`);
         
         // Return Make.com compatible format
         const response = {
