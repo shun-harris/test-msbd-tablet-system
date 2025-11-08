@@ -622,26 +622,45 @@
   async function verifyDropIn(phone, { timeoutMs = 8000 } = {}){
     try {
       const d = String(phone||"").replace(/\D/g, "").slice(-10);
-      if (d.length !== 10) return { exists:false };
+      console.log(`🎫 DROP-IN VERIFY START:`, { phone, normalized: d, length: d.length });
+      
+      if (d.length !== 10) {
+        console.warn(`⚠️ Invalid phone length: ${d.length}`);
+        return { exists:false };
+      }
       
       const lookupSource = localStorage.getItem('contactLookupSource') || 'ghl';
+      console.log(`🔍 Lookup source: ${lookupSource}`);
       
       // Try CRM first if source is 'crm' or 'both'
       if (lookupSource === 'crm' || lookupSource === 'both') {
         try {
+          console.log(`📞 Calling CRM for drop-in...`);
           const crmResult = await verifyViaCRM(d, 'checkdrop', timeoutMs);
-          if (crmResult.exists) return crmResult; // Found in CRM
-          if (lookupSource === 'crm') return { exists: false }; // CRM-only mode, not found
+          console.log(`📊 CRM result:`, crmResult);
+          
+          if (crmResult.exists) {
+            console.log(`✅ Found in CRM!`);
+            return crmResult;
+          }
+          
+          if (lookupSource === 'crm') {
+            console.log(`❌ CRM-only mode, not found`);
+            return { exists: false };
+          }
+          
+          console.log(`⏭️ Not in CRM, falling back to GHL...`);
         } catch (err) {
-          if (lookupSource === 'crm') return { exists: false }; // CRM-only mode failed
-          // Fall through to GHL for 'both' mode
+          console.error(`💥 CRM lookup failed:`, err);
+          if (lookupSource === 'crm') return { exists: false };
         }
       }
       
       // Use GHL (Make.com) if source is 'ghl' or fallback from 'both'
+      console.log(`🌐 Using GHL/Make.com...`);
       return await verifyViaGHLDropIn(d, timeoutMs);
     } catch (err) {
-      try { if (typeof DEV !== 'undefined' && DEV) console.error("[DROP] verify error", err); } catch(_){ }
+      console.error(`💥 DROP-IN VERIFY ERROR:`, err);
       return { exists:false };
     }
   }
@@ -1472,20 +1491,48 @@
         const u = new URL(endpoint, window.location.origin);
         u.searchParams.set("phone", phone);
         
+        console.log(`🔍 CRM Lookup Starting:`, {
+          product,
+          phone,
+          endpoint,
+          fullUrl: u.toString(),
+          origin: window.location.origin
+        });
+        
         const ctrl = new AbortController();
         const to = setTimeout(() => ctrl.abort("timeout"), timeoutMs);
+        
         const resp = await fetch(u.toString(), { method:"GET", signal: ctrl.signal, cache:"no-store" });
         clearTimeout(to);
-        if(!resp.ok) return { exists:false };
+        
+        console.log(`📡 CRM Response:`, {
+          status: resp.status,
+          statusText: resp.statusText,
+          ok: resp.ok,
+          url: resp.url
+        });
+        
+        if(!resp.ok) {
+          console.error(`❌ CRM lookup failed: ${resp.status} ${resp.statusText}`);
+          return { exists:false };
+        }
+        
         const data = await resp.json();
+        console.log(`✅ CRM Data received:`, data);
         
         // Same format as GHL/Make.com
         const exists = data.exists === true || data.ok === true;
         const name = data.name || `${data.firstName||''} ${data.lastName||''}`.trim();
         const classesTaken = Number(data.classesTaken || data.classCount || 0) || 0;
         
-        return { exists, name, firstName: data.firstName, lastName: data.lastName, email: data.email, classesTaken };
-      }catch(_){ return { exists:false }; }
+        const result = { exists, name, firstName: data.firstName, lastName: data.lastName, email: data.email, classesTaken };
+        console.log(`🎯 CRM Final result:`, result);
+        
+        return result;
+      }catch(err){ 
+        console.error(`💥 CRM lookup exception:`, err);
+        return { exists:false }; 
+      }
     }
 
     // NEXT from member keypad → use Make.com

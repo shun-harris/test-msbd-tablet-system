@@ -293,7 +293,13 @@ app.get("/test/environment", (req, res) => {
 // ================= Contact Lookup Endpoints (Direct PostgreSQL) =================
 // Member lookup - checks if phone/email belongs to active member
 app.get("/lookup/member", async (req, res) => {
+    console.log(`\n👤 ===== MEMBER LOOKUP REQUEST =====`);
+    console.log(`📞 Query params:`, req.query);
+    console.log(`🌐 Request URL:`, req.url);
+    console.log(`🔌 DB Pool available:`, !!pgPool);
+    
     if (!pgPool) {
+        console.error(`❌ PostgreSQL pool not initialized - DATABASE_URL missing?`);
         return res.status(503).json({ 
             exists: false, 
             error: 'Database not configured' 
@@ -302,50 +308,71 @@ app.get("/lookup/member", async (req, res) => {
 
     try {
         const { phone, email } = req.query;
+        console.log(`📥 Raw input:`, { phone, email });
         
         // Normalize phone to last 10 digits
         const normalizedPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : null;
+        console.log(`🔢 Normalized phone:`, normalizedPhone);
         
         let contact = null;
         
         // Try phone lookup first
         if (normalizedPhone) {
+            console.log(`📲 Querying by phone: ${normalizedPhone}`);
             const phoneResult = await pgPool.query(
                 'SELECT * FROM contacts WHERE phone = $1',
                 [normalizedPhone]
             );
             contact = phoneResult.rows[0];
+            console.log(`📊 Phone query result:`, contact ? `Found: ${contact.name || contact.first_name}` : 'Not found');
         }
         
         // Fallback to email lookup
         if (!contact && email) {
+            console.log(`📧 Querying by email: ${email}`);
             const emailResult = await pgPool.query(
                 'SELECT * FROM contacts WHERE LOWER(email) = LOWER($1)',
                 [email]
             );
             contact = emailResult.rows[0];
+            console.log(`📊 Email query result:`, contact ? `Found: ${contact.name || contact.first_name}` : 'Not found');
         }
         
         // No contact found
         if (!contact) {
+            console.log(`❌ No contact found for phone=${normalizedPhone}, email=${email}`);
             return res.json({ exists: false });
         }
         
+        console.log(`✅ Contact found:`, {
+            id: contact.id,
+            name: contact.name,
+            first_name: contact.first_name,
+            last_name: contact.last_name,
+            membership_status: contact.membership_status,
+            contact_type: contact.contact_type
+        });
+        
         // Verify member status
         const isMember = contact.membership_status === 'ACTIVE' || contact.contact_type === 'member';
+        console.log(`🎫 Is member?`, isMember, `(status=${contact.membership_status}, type=${contact.contact_type})`);
+        
         if (!isMember) {
+            console.log(`❌ Contact exists but is not an active member`);
             return res.json({ exists: false });
         }
         
         // Count classes taken
+        console.log(`📊 Counting attendance for contact_id=${contact.id}`);
         const classCountResult = await pgPool.query(
             'SELECT COUNT(*) as count FROM attendance_calendar WHERE contact_id = $1',
             [contact.id]
         );
         const classesTaken = parseInt(classCountResult.rows[0]?.count || 0);
+        console.log(`📈 Classes taken: ${classesTaken}`);
         
         // Return Make.com compatible format
-        return res.json({
+        const response = {
             result: 'yes',
             exists: true,
             ok: true,
@@ -355,17 +382,29 @@ app.get("/lookup/member", async (req, res) => {
             email: contact.email,
             classesTaken,
             contactType: contact.contact_type
-        });
+        };
+        
+        console.log(`✅ Returning success response:`, response);
+        console.log(`===================================\n`);
+        return res.json(response);
         
     } catch (error) {
-        console.error('Member lookup error:', error);
+        console.error(`💥 MEMBER LOOKUP ERROR:`, error);
+        console.error(`Stack:`, error.stack);
+        console.log(`===================================\n`);
         return res.json({ exists: false });
     }
 });
 
 // Drop-in lookup - checks if phone/email exists (any contact type)
 app.get("/lookup/drop-in", async (req, res) => {
+    console.log(`\n🎫 ===== DROP-IN LOOKUP REQUEST =====`);
+    console.log(`📞 Query params:`, req.query);
+    console.log(`🌐 Request URL:`, req.url);
+    console.log(`🔌 DB Pool available:`, !!pgPool);
+    
     if (!pgPool) {
+        console.error(`❌ PostgreSQL pool not initialized - DATABASE_URL missing?`);
         return res.status(503).json({ 
             exists: false, 
             error: 'Database not configured' 
@@ -374,44 +413,61 @@ app.get("/lookup/drop-in", async (req, res) => {
 
     try {
         const { phone, email } = req.query;
+        console.log(`📥 Raw input:`, { phone, email });
         
         // Normalize phone to last 10 digits
         const normalizedPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : null;
+        console.log(`🔢 Normalized phone:`, normalizedPhone);
         
         let contact = null;
         
         // Try phone lookup first
         if (normalizedPhone) {
+            console.log(`📲 Querying by phone: ${normalizedPhone}`);
             const phoneResult = await pgPool.query(
                 'SELECT * FROM contacts WHERE phone = $1',
                 [normalizedPhone]
             );
             contact = phoneResult.rows[0];
+            console.log(`📊 Phone query result:`, contact ? `Found: ${contact.name || contact.first_name}` : 'Not found');
         }
         
         // Fallback to email lookup
         if (!contact && email) {
+            console.log(`📧 Querying by email: ${email}`);
             const emailResult = await pgPool.query(
                 'SELECT * FROM contacts WHERE LOWER(email) = LOWER($1)',
                 [email]
             );
             contact = emailResult.rows[0];
+            console.log(`📊 Email query result:`, contact ? `Found: ${contact.name || contact.first_name}` : 'Not found');
         }
         
         // No contact found
         if (!contact) {
+            console.log(`❌ No contact found for phone=${normalizedPhone}, email=${email}`);
             return res.json({ exists: false });
         }
         
+        console.log(`✅ Contact found:`, {
+            id: contact.id,
+            name: contact.name,
+            first_name: contact.first_name,
+            last_name: contact.last_name,
+            contact_type: contact.contact_type
+        });
+        
         // Count classes taken
+        console.log(`📊 Counting attendance for contact_id=${contact.id}`);
         const classCountResult = await pgPool.query(
             'SELECT COUNT(*) as count FROM attendance_calendar WHERE contact_id = $1',
             [contact.id]
         );
         const classesTaken = parseInt(classCountResult.rows[0]?.count || 0);
+        console.log(`📈 Classes taken: ${classesTaken}`);
         
         // Return Make.com compatible format
-        return res.json({
+        const response = {
             result: 'yes',
             exists: true,
             ok: true,
@@ -421,10 +477,16 @@ app.get("/lookup/drop-in", async (req, res) => {
             email: contact.email,
             classesTaken,
             contactType: contact.contact_type
-        });
+        };
+        
+        console.log(`✅ Returning success response:`, response);
+        console.log(`===================================\n`);
+        return res.json(response);
         
     } catch (error) {
-        console.error('Drop-in lookup error:', error);
+        console.error(`💥 DROP-IN LOOKUP ERROR:`, error);
+        console.error(`Stack:`, error.stack);
+        console.log(`===================================\n`);
         return res.json({ exists: false });
     }
 });
