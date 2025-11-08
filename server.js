@@ -349,15 +349,17 @@ app.get("/lookup/member", async (req, res) => {
         
         let contact = null;
         
-        // Try phone lookup first
+        // Try phone lookup first - handle multiple formats (+1, without +1, etc.)
         if (normalizedPhone) {
-            console.log(`📲 Querying by phone: ${normalizedPhone}`);
+            console.log(`📲 Querying by phone: ${normalizedPhone} (also trying +1${normalizedPhone})`);
+            // Match phone numbers in various formats: 6123617155, +16123617155, +1-612-361-7155, etc.
             const phoneResult = await pgPool.query(
-                'SELECT * FROM contacts WHERE phone = $1',
+                `SELECT * FROM contacts 
+                 WHERE REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE '%' || $1`,
                 [normalizedPhone]
             );
             contact = phoneResult.rows[0];
-            console.log(`📊 Phone query result:`, contact ? `Found: ${contact.name || contact.first_name}` : 'Not found');
+            console.log(`📊 Phone query result:`, contact ? `Found: ${contact.name || contact.first_name} (stored as: ${contact.phone})` : 'Not found');
         }
         
         // Fallback to email lookup
@@ -382,6 +384,7 @@ app.get("/lookup/member", async (req, res) => {
             name: contact.name,
             first_name: contact.first_name,
             last_name: contact.last_name,
+            phone: contact.phone,
             membership_status: contact.membership_status,
             contact_type: contact.contact_type
         });
@@ -454,15 +457,17 @@ app.get("/lookup/drop-in", async (req, res) => {
         
         let contact = null;
         
-        // Try phone lookup first
+        // Try phone lookup first - handle multiple formats (+1, without +1, etc.)
         if (normalizedPhone) {
-            console.log(`📲 Querying by phone: ${normalizedPhone}`);
+            console.log(`📲 Querying by phone: ${normalizedPhone} (also trying +1${normalizedPhone})`);
+            // Match phone numbers in various formats: 6123617155, +16123617155, +1-612-361-7155, etc.
             const phoneResult = await pgPool.query(
-                'SELECT * FROM contacts WHERE phone = $1',
+                `SELECT * FROM contacts 
+                 WHERE REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE '%' || $1`,
                 [normalizedPhone]
             );
             contact = phoneResult.rows[0];
-            console.log(`📊 Phone query result:`, contact ? `Found: ${contact.name || contact.first_name}` : 'Not found');
+            console.log(`📊 Phone query result:`, contact ? `Found: ${contact.name || contact.first_name} (stored as: ${contact.phone})` : 'Not found');
         }
         
         // Fallback to email lookup
@@ -487,6 +492,7 @@ app.get("/lookup/drop-in", async (req, res) => {
             name: contact.name,
             first_name: contact.first_name,
             last_name: contact.last_name,
+            phone: contact.phone,
             contact_type: contact.contact_type
         });
         
