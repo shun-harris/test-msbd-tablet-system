@@ -259,20 +259,10 @@ app.use((req, res, next) => {
     next();
 });
 
-// Routes (BEFORE static files so API routes take precedence)
+// ===== ALL API ROUTES DEFINED HERE (BEFORE STATIC FILES) =====
+// HTML pages
 app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
 app.get("/options", (req, res) => res.sendFile(__dirname + "/options.html"));
-
-// Static files AFTER API routes
-app.use(express.static(".", { 
-    index: false, // Don't serve index.html from static middleware
-    setHeaders: (res, path) => {
-        // Only serve actual files, not directories
-        if (path.endsWith('.html') || path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.json')) {
-            console.log(`📄 Serving static file: ${path}`);
-        }
-    }
-}));
 
 // Latest commit endpoint (for admin panel version display)
 app.get("/api/latest-commit", (req, res) => {
@@ -1430,6 +1420,17 @@ app.post('/auth/revoke-session', (req,res)=>{
     }
     res.json({ ok:true });
 });
+
+// ===== STATIC FILES (LAST - ONLY IF NO ROUTE MATCHED) =====
+app.use(express.static(".", { 
+    index: false, // Don't serve index.html from static middleware
+    setHeaders: (res, path) => {
+        // Only serve actual files, not directories
+        if (path.endsWith('.html') || path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.json')) {
+            console.log(`📄 Serving static file: ${path}`);
+        }
+    }
+}));
 
 app.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);
