@@ -252,17 +252,27 @@ app.options('*', (req,res)=>{
     res.sendStatus(200);
 });
 app.use(express.json());
-app.use(express.static("."));
 
-// Request logging
+// Request logging (BEFORE static files so we see API requests)
 app.use((req, res, next) => {
     console.log(`📝 ${req.method} ${req.path} from ${req.get('host')}`);
     next();
 });
 
-// Routes
+// Routes (BEFORE static files so API routes take precedence)
 app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
 app.get("/options", (req, res) => res.sendFile(__dirname + "/options.html"));
+
+// Static files AFTER API routes
+app.use(express.static(".", { 
+    index: false, // Don't serve index.html from static middleware
+    setHeaders: (res, path) => {
+        // Only serve actual files, not directories
+        if (path.endsWith('.html') || path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.json')) {
+            console.log(`📄 Serving static file: ${path}`);
+        }
+    }
+}));
 
 // Latest commit endpoint (for admin panel version display)
 app.get("/api/latest-commit", (req, res) => {
