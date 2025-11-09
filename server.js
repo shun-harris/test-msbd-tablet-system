@@ -748,6 +748,7 @@ app.post("/member-check-in", async (req, res) => {
             // Map "Salsa Basics - Free" to "Salsa Basics" for CRM
             const normalizedClassName = className.replace(/\s*-\s*Free$/i, '').trim();
             
+            console.log(`📤 Sending check-in to CRM for class: ${normalizedClassName}`);
             const crmResult = await sendCheckInToCRM({
                 phone,
                 email,
@@ -761,6 +762,7 @@ app.post("/member-check-in", async (req, res) => {
                 notes: `Member check-in from tablet${className.includes('Free') ? ' - Free class' : ''}`
             });
             
+            console.log(`📥 CRM sync result for ${normalizedClassName}:`, crmResult);
             results.push({ class: className, synced: crmResult.success });
         }
 
