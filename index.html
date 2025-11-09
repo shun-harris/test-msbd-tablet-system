@@ -559,29 +559,37 @@
       try { if (typeof DEV !== "undefined" && DEV) console.log("[GHL] Sent member check-in", Object.fromEntries(qp)); } catch (_){}
     }
 
-    // Also send to CRM (new integration)
+    // Also send to CRM (send directly to CRM webhook like GHL)
     try {
       const nameParts = (name || 'Member').split(' ');
-      console.log('📤 [CRM] Sending check-in to /member-check-in...', { phone, classes });
-      const response = await fetch('/member-check-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: String(phone).replace(/\D/g,"").slice(-10),
-          first_name: nameParts[0] || 'Member',
-          last_name: nameParts.slice(1).join(' ') || '',
-          classes: classes || []
-        })
-      });
+      const CRM_WEBHOOK_URL = 'https://test.mydancedesk.com/api/webhooks/tablet/check-in';
       
-      console.log('📥 [CRM] Response status:', response.status, response.statusText);
+      console.log('📤 [CRM] Sending check-in directly to CRM webhook...', { phone, classes });
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ [CRM] Check-in synced successfully:', result);
-      } else {
-        const errorText = await response.text();
-        console.error('❌ [CRM] Check-in failed:', response.status, errorText);
+      // Send each class as a separate check-in (like GHL does)
+      for (const className of classes) {
+        const response = await fetch(CRM_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: String(phone).replace(/\D/g,"").slice(-10),
+            first_name: nameParts[0] || 'Member',
+            last_name: nameParts.slice(1).join(' ') || '',
+            class_name: className,
+            checked_in_at: new Date().toISOString(),
+            notes: `Member check-in from tablet - ${className}`
+          })
+        });
+        
+        console.log(`📥 [CRM] Response for ${className}:`, response.status, response.statusText);
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`✅ [CRM] Check-in synced: ${className}`, result);
+        } else {
+          const errorText = await response.text();
+          console.error(`❌ [CRM] Check-in failed for ${className}:`, response.status, errorText);
+        }
       }
     } catch (crmError) {
       console.error("[CRM] Failed to sync check-in (continuing anyway):", crmError);
