@@ -10,11 +10,20 @@ const { sendCheckInToCRM, sendPaymentToCRM } = require('./crm-webhook');
 // ================= PostgreSQL Connection (Shared CRM Database) =================
 let pgPool = null;
 if (process.env.DATABASE_URL) {
+    // Extract database name from connection string for logging (without exposing credentials)
+    const dbUrlMatch = process.env.DATABASE_URL.match(/\/([^/?]+)(\?|$)/);
+    const dbName = dbUrlMatch ? dbUrlMatch[1] : 'unknown';
+    const hostMatch = process.env.DATABASE_URL.match(/@([^:/]+)/);
+    const host = hostMatch ? hostMatch[1] : 'unknown';
+    
     pgPool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.DATABASE_URL.includes('railway.app') ? { rejectUnauthorized: false } : false
     });
-    console.log('✅ PostgreSQL connection pool initialized (shared CRM database)');
+    console.log('✅ PostgreSQL connection pool initialized');
+    console.log(`   ├─ Database: ${dbName}`);
+    console.log(`   ├─ Host: ${host}`);
+    console.log(`   └─ Environment: ${process.env.APP_ENV || 'auto-detect'}`);
 } else {
     console.warn('⚠️  DATABASE_URL not set - contact lookup will not work');
 }
@@ -326,7 +335,10 @@ app.get("/test/database", async (req, res) => {
 // ================= Contact Lookup Endpoints (Direct PostgreSQL) =================
 // Member lookup - checks if phone/email belongs to active member
 app.get("/lookup/member", async (req, res) => {
+    const det = detectEnvironment(req);
     console.log(`\n👤 ===== MEMBER LOOKUP REQUEST =====`);
+    console.log(`🌍 Environment: ${det.env} (${det.reason})`);
+    console.log(`🔗 Host: ${det.host}`);
     console.log(`📞 Query params:`, req.query);
     console.log(`🌐 Request URL:`, req.url);
     console.log(`🔌 DB Pool available:`, !!pgPool);
@@ -430,7 +442,10 @@ app.get("/lookup/member", async (req, res) => {
 
 // Drop-in lookup - checks if phone/email exists (any contact type)
 app.get("/lookup/drop-in", async (req, res) => {
+    const det = detectEnvironment(req);
     console.log(`\n🎫 ===== DROP-IN LOOKUP REQUEST =====`);
+    console.log(`🌍 Environment: ${det.env} (${det.reason})`);
+    console.log(`🔗 Host: ${det.host}`);
     console.log(`📞 Query params:`, req.query);
     console.log(`🌐 Request URL:`, req.url);
     console.log(`🔌 DB Pool available:`, !!pgPool);
