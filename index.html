@@ -1281,9 +1281,9 @@
         if (hasError) return;
 
         const webhookUrl = "https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/d94d472b-aaf4-478a-83f6-b55375fd7258";
-        const crmWebhookUrl = window.location.hostname.includes('test.') 
-          ? "https://test.mydancedesk.com/api/webhooks/tablet/check-in"
-          : "https://crm.msbdance.com/api/webhooks/tablet/check-in";
+        const crmContactUrl = window.location.hostname.includes('test.') 
+          ? "https://test.mydancedesk.com/api/webhooks/ghl/contact"
+          : "https://crm.msbdance.com/api/webhooks/ghl/contact";
         
         const payload = {
           phone: d,
@@ -1300,9 +1300,9 @@
             body: JSON.stringify(payload)
           });
           
-          // Also send to CRM (new integration)
+          // Also send to CRM to create contact (FIXED: use /api/webhooks/ghl/contact instead of check-in endpoint)
           try {
-            await fetch(crmWebhookUrl, {
+            await fetch(crmContactUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -1310,11 +1310,12 @@
                 first_name: firstName.value.trim(),
                 last_name: lastName.value.trim(),
                 email: email.value.trim(),
-                notes: 'New user signup from tablet'
+                source: 'Tablet Drop-In Signup'
               })
             });
+            console.log("✅ New contact synced to CRM");
           } catch (crmError) {
-            console.warn("Failed to sync to CRM (continuing anyway):", crmError);
+            console.warn("Failed to sync contact to CRM (continuing anyway):", crmError);
           }
         } catch (error) {
           console.error("Failed to send data to webhook", error);
