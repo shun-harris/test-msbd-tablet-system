@@ -724,7 +724,9 @@
   async function verifyViaCRM(phone, product, timeoutMs = 8000){
     try{
       // Call Railway API server (not relative path, since we're on GitHub Pages)
-      const API_BASE = 'https://test-msbd-tablet-system-production.up.railway.app';
+      const API_BASE = TEST 
+        ? 'https://test-msbd-tablet-system-production.up.railway.app'
+        : 'https://prod-msbd-tablet-system-production.up.railway.app';
       const endpoint = product === 'checkmember' ? '/lookup/member' : '/lookup/drop-in';
       const u = new URL(endpoint, API_BASE);
       u.searchParams.set("phone", phone);
