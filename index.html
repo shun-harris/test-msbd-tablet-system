@@ -562,7 +562,9 @@
     // Also send to CRM (send directly to CRM webhook like GHL)
     try {
       const nameParts = (name || 'Member').split(' ');
-      const CRM_WEBHOOK_URL = 'https://test.mydancedesk.com/api/webhooks/tablet/check-in';
+      const CRM_WEBHOOK_URL = TEST 
+        ? 'https://test.mydancedesk.com/api/webhooks/tablet/check-in'
+        : 'https://mydancedesk.com/api/webhooks/tablet/check-in';
       
       console.log('📤 [CRM] Sending check-in directly to CRM webhook...', { phone, classes });
       
@@ -1281,9 +1283,9 @@
         if (hasError) return;
 
         const webhookUrl = "https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/d94d472b-aaf4-478a-83f6-b55375fd7258";
-        const crmContactUrl = window.location.hostname.includes('test.') 
+        const crmContactUrl = TEST 
           ? "https://test.mydancedesk.com/api/webhooks/ghl/contact"
-          : "https://crm.msbdance.com/api/webhooks/ghl/contact";
+          : "https://mydancedesk.com/api/webhooks/ghl/contact";
         
         const payload = {
           phone: d,
@@ -1299,8 +1301,9 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
+          console.log("✅ New contact sent to GHL");
           
-          // Also send to CRM to create contact (FIXED: use /api/webhooks/ghl/contact instead of check-in endpoint)
+          // Also send to CRM to create contact
           try {
             await fetch(crmContactUrl, {
               method: "POST",
