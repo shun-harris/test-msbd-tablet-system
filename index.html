@@ -562,12 +562,9 @@
     // Also send to CRM (send directly to CRM webhook like GHL)
     try {
       const nameParts = (name || 'Member').split(' ');
-      // TEMPORARILY: Both prod and test tablets send to test CRM while testing
-      const CRM_WEBHOOK_URL = 'https://test.mydancedesk.com/api/webhooks/tablet/check-in';
-      // TODO: Switch back when prod CRM is ready:
-      // const CRM_WEBHOOK_URL = TEST 
-      //   ? 'https://test.mydancedesk.com/api/webhooks/tablet/check-in'
-      //   : 'https://mydancedesk.com/api/webhooks/tablet/check-in';
+      const CRM_WEBHOOK_URL = TEST 
+        ? 'https://test.mydancedesk.com/api/webhooks/tablet/check-in'
+        : 'https://mydancedesk.com/api/webhooks/tablet/check-in';
       
       console.log('📤 [CRM] Sending check-in directly to CRM webhook...', { phone, classes });
       
