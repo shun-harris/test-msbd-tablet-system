@@ -564,7 +564,7 @@
       const nameParts = (name || 'Member').split(' ');
       const CRM_WEBHOOK_URL = TEST 
         ? 'https://test.mydancedesk.com/api/webhooks/tablet/check-in'
-        : 'https://mydancedesk.com/api/webhooks/tablet/check-in';
+        : 'https://app.mydancedesk.com/api/webhooks/tablet/check-in';
       
       console.log('📤 [CRM] Sending check-in directly to CRM webhook...', { phone, classes });
       
@@ -1287,7 +1287,7 @@
         const webhookUrl = "https://services.leadconnectorhq.com/hooks/3RfSeF58PmlwTx5aIQ0a/webhook-trigger/d94d472b-aaf4-478a-83f6-b55375fd7258";
         const crmContactUrl = TEST 
           ? "https://test.mydancedesk.com/api/webhooks/ghl/contact"
-          : "https://mydancedesk.com/api/webhooks/ghl/contact";
+          : "https://app.mydancedesk.com/api/webhooks/ghl/contact";
         
         const payload = {
           phone: d,
