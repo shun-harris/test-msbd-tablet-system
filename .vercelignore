@@ -1,0 +1,17 @@
+node_modules
+.git
+.env*
+*.log
+server.js
+crm-webhook.js
+package.json
+package-lock.json
+scripts/
+docs/
+backups/
+.vscode/
+README.md
+DEPLOYMENT.md
+CHANGELOG.md
+version.json
+pin_store.sqlite

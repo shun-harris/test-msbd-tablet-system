@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "name": "msbd-tablet-system",
+  "builds": [
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/options",
+      "dest": "/options.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "regions": ["iad1"],
+  "github": {
+    "enabled": true,
+    "autoAlias": true
+  }
+}

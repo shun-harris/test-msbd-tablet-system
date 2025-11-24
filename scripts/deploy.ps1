@@ -41,8 +41,8 @@ switch ($Target) {
         & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\bump-version.ps1" $BumpType -Notes $bumpNotes
         $ver = (Get-Content version.json -Raw | ConvertFrom-Json).version
         Write-Host "Deploying v$ver to TEST..." -ForegroundColor Green
-        Write-Host "Setting up CNAME for test.tablet.msbdance.com..." -ForegroundColor Cyan
-        "test.tablet.msbdance.com" | Out-File -FilePath "CNAME" -Encoding ASCII -NoNewline
+        Write-Host "Auto-fixing CNAME for test environment..." -ForegroundColor Cyan
+        & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\auto-fix-cname.ps1"
         git add .
         git commit -m "v${ver}: Test deploy"
         git tag -f "v${ver}"
@@ -59,7 +59,8 @@ switch ($Target) {
         Write-Host "⚠ LEGACY PROD DEPLOY (bypasses promotion gate)" -ForegroundColor Red
         $ver = (Get-Content version.json -Raw | ConvertFrom-Json).version
         Write-Host "Deploying existing v$ver directly to PRODUCTION..." -ForegroundColor Yellow
-        "tablet.msbdance.com" | Out-File -FilePath "CNAME" -Encoding ASCII -NoNewline
+        Write-Host "Auto-fixing CNAME for production environment..." -ForegroundColor Cyan
+        & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\auto-fix-cname.ps1"
         git add CNAME
         git commit -m "v${ver}: Legacy direct prod deploy" 2>$null | Out-Null
         git tag -f "v${ver}" 2>$null | Out-Null
@@ -73,7 +74,8 @@ switch ($Target) {
             return
         }
         Write-Host "⚠ LEGACY BOTH DEPLOY (combined)" -ForegroundColor Red
-        "test.tablet.msbdance.com" | Out-File -FilePath "CNAME" -Encoding ASCII -NoNewline
+        Write-Host "Auto-fixing CNAME for test environment..." -ForegroundColor Cyan
+        & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\auto-fix-cname.ps1"
         git add .
         $bumpNotes = if([string]::IsNullOrWhiteSpace($Notes)) { 'Legacy both deployment' } else { $Notes }
         & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\bump-version.ps1" $BumpType -Notes $bumpNotes
@@ -81,7 +83,8 @@ switch ($Target) {
         git commit -m "v${ver}: Legacy both test deploy"
         git tag -f "v${ver}"
         git push test main --follow-tags
-        "tablet.msbdance.com" | Out-File -FilePath "CNAME" -Encoding ASCII -NoNewline
+        Write-Host "Auto-fixing CNAME for production environment..." -ForegroundColor Cyan
+        & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\auto-fix-cname.ps1"
         git add CNAME
         git commit -m "v${ver}: Legacy both prod deploy" 2>$null | Out-Null
         git tag -f "v${ver}" 2>$null | Out-Null

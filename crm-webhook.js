@@ -61,10 +61,13 @@ async function sendCheckInToCRM(data) {
  * @param {string} data.first_name Customer first name
  * @param {string} data.last_name Customer last name
  * @param {number} data.amount Payment amount
+ * @param {number} data.payment_amount Payment amount (for credit calculation)
  * @param {string} data.currency Currency code (default: USD)
  * @param {string} data.method Payment method (CASH, CARD, etc)
  * @param {string} data.stripe_payment_id Stripe payment ID (if card payment)
  * @param {string} data.stripe_customer_id Stripe customer ID
+ * @param {string} data.purchase_type Purchase type: 'credits' or 'membership'
+ * @param {string} data.plan_name Membership plan name (if membership)
  * @param {string} data.description Payment description
  * @param {Object} data.metadata Additional metadata
  */
@@ -75,9 +78,11 @@ async function sendPaymentToCRM(data) {
     }
 
     try {
-        console.log(`📤 Sending payment to CRM: $${data.amount} from ${data.phone || data.email}`);
+        console.log(`📤 Sending payment to CRM: $${data.amount} from ${data.phone || data.email} (type: ${data.purchase_type || 'unknown'})`);
         
-        const response = await fetch(`${CRM_WEBHOOK_URL}/payment`, {
+        // Send to /check-in endpoint with purchase_type
+        // This will trigger credit calculation or membership setup
+        const response = await fetch(`${CRM_WEBHOOK_URL}/check-in`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -91,7 +96,7 @@ async function sendPaymentToCRM(data) {
         }
 
         const result = await response.json();
-        console.log(`✅ Payment synced to CRM: ${result.payment_id}`);
+        console.log(`✅ Payment synced to CRM:`, result);
         return { success: true, result };
 
     } catch (error) {

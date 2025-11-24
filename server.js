@@ -541,7 +541,7 @@ app.post("/create-payment-intent", async (req, res) => {
     console.log("💰 Payment intent request received:", req.body);
     try {
     const { stripe, environment, detection } = getStripeForRequest(req);
-        const { amount, currency = "usd", description = "Dance class payment", payment_method_id } = req.body;
+        const { amount, currency = "usd", description = "Dance class payment", payment_method_id, product_type } = req.body;
         
         console.log(`💳 Creating payment intent: $${amount} ${currency}`);
         
@@ -710,12 +710,13 @@ app.post("/create-payment-intent", async (req, res) => {
         if (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture') {
             setImmediate(async () => {
                 try {
-                    await sendPaymentToCRM({
+                    const paymentData = {
                         phone,
                         email,
                         first_name: name?.split(' ')[0] || 'Guest',
                         last_name: name?.split(' ').slice(1).join(' ') || '',
-                        amount: amount / 100, // Convert cents to dollars
+                        amount: amount, // Amount in dollars
+                        payment_amount: amount, // For credit calculation
                         currency: currency || 'USD',
                         method: 'CARD',
                         stripe_payment_id: paymentIntent.id,
@@ -725,7 +726,19 @@ app.post("/create-payment-intent", async (req, res) => {
                             source: 'tablet',
                             environment: environment
                         }
-                    });
+                    };
+
+                    // Add purchase_type for credit calculation
+                    // 'single' product_type = class purchase = credits
+                    // 'membership' product_type = membership purchase
+                    if (product_type === 'single') {
+                        paymentData.purchase_type = 'credits';
+                    } else if (product_type === 'membership') {
+                        paymentData.purchase_type = 'membership';
+                        paymentData.plan_name = description; // Gold/Silver Membership
+                    }
+
+                    await sendPaymentToCRM(paymentData);
                 } catch (err) {
                     console.error('Failed to sync payment to CRM:', err.message);
                 }
