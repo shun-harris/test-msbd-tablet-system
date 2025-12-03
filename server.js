@@ -1448,6 +1448,257 @@ app.post('/auth/revoke-session', (req,res)=>{
     res.json({ ok:true });
 });
 
+// ===== LOCAL NETWORK BRIDGE =====
+// These endpoints allow the CRM to use this local device to scan the network
+// since cloud-hosted servers can't see local network devices
+
+// GET /bridge/status - Check if bridge is available
+app.get('/bridge/status', (req, res) => {
+    const os = require('os');
+    const interfaces = os.networkInterfaces();
+    const localIps = [];
+    
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                localIps.push({ interface: name, ip: iface.address, mac: iface.mac });
+            }
+        }
+    }
+    
+    res.json({ 
+        ok: true, 
+        bridge: 'Check-In Tablet System',
+        version: require('./package.json').version || '1.0.0',
+        localIps,
+        capabilities: ['roku-scan', 'roku-control', 'camera-scan']
+    });
+});
+
+// POST /bridge/scan/roku - Scan for Roku devices on local network
+app.post('/bridge/scan/roku', async (req, res) => {
+    const dgram = require('dgram');
+    const devices = [];
+    
+    console.log('🔍 [BRIDGE] Starting Roku SSDP scan...');
+    
+    const SSDP_ADDRESS = '239.255.255.250';
+    const SSDP_PORT = 1900;
+    const SEARCH_TARGET = 'roku:ecp';
+    
+    const message = Buffer.from(
+        'M-SEARCH * HTTP/1.1\r\n' +
+        `HOST: ${SSDP_ADDRESS}:${SSDP_PORT}\r\n` +
+        'MAN: "ssdp:discover"\r\n' +
+        'MX: 3\r\n' +
+        `ST: ${SEARCH_TARGET}\r\n` +
+        '\r\n'
+    );
+    
+    try {
+        const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+        
+        socket.on('message', async (msg, rinfo) => {
+            const response = msg.toString();
+            const locationMatch = response.match(/LOCATION:\s*(.+)/i);
+            
+            if (locationMatch) {
+                const location = locationMatch[1].trim();
+                const ipMatch = location.match(/http:\/\/([^:]+):(\d+)/);
+                
+                if (ipMatch && !devices.find(d => d.ip === ipMatch[1])) {
+                    try {
+                        const infoUrl = `http://${ipMatch[1]}:${ipMatch[2]}/query/device-info`;
+                        const controller = new AbortController();
+                        const timeout = setTimeout(() => controller.abort(), 3000);
+                        
+                        const infoRes = await fetch(infoUrl, { signal: controller.signal });
+                        clearTimeout(timeout);
+                        
+                        if (infoRes.ok) {
+                            const xml = await infoRes.text();
+                            const nameMatch = xml.match(/<friendly-device-name>([^<]+)<\/friendly-device-name>/);
+                            const modelMatch = xml.match(/<model-name>([^<]+)<\/model-name>/);
+                            const serialMatch = xml.match(/<serial-number>([^<]+)<\/serial-number>/);
+                            const macMatch = xml.match(/<wifi-mac>([^<]+)<\/wifi-mac>/) || xml.match(/<ethernet-mac>([^<]+)<\/ethernet-mac>/);
+                            const powerMatch = xml.match(/<power-mode>([^<]+)<\/power-mode>/);
+                            
+                            const device = {
+                                ip: ipMatch[1],
+                                port: parseInt(ipMatch[2]),
+                                type: 'roku',
+                                name: nameMatch ? nameMatch[1] : null,
+                                modelName: modelMatch ? modelMatch[1] : null,
+                                serialNumber: serialMatch ? serialMatch[1] : null,
+                                mac: macMatch ? macMatch[1] : null,
+                                powerMode: powerMatch ? powerMatch[1] : null
+                            };
+                            devices.push(device);
+                            console.log(`   📺 Found: ${device.name} (${device.ip})`);
+                        }
+                    } catch (err) {
+                        console.log(`   ⚠️ Device at ${ipMatch[1]} didn't respond:`, err.message);
+                    }
+                }
+            }
+        });
+        
+        socket.on('error', (err) => {
+            console.error('🔴 [BRIDGE] SSDP socket error:', err.message);
+        });
+        
+        socket.bind(() => {
+            socket.addMembership(SSDP_ADDRESS);
+            socket.send(message, 0, message.length, SSDP_PORT, SSDP_ADDRESS);
+            console.log('   📡 SSDP M-SEARCH sent, waiting for responses...');
+        });
+        
+        // Wait for responses then close
+        setTimeout(() => {
+            socket.close();
+            console.log(`✅ [BRIDGE] Roku scan complete. Found ${devices.length} device(s)`);
+            res.json({ success: true, devices });
+        }, 4000);
+        
+    } catch (error) {
+        console.error('🔴 [BRIDGE] Roku scan error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /bridge/roku/keypress - Send keypress to Roku device
+app.post('/bridge/roku/keypress', async (req, res) => {
+    const { ip, key, port = 8060 } = req.body;
+    
+    if (!ip || !key) {
+        return res.status(400).json({ error: 'IP and key required' });
+    }
+    
+    try {
+        const url = `http://${ip}:${port}/keypress/${key}`;
+        const response = await fetch(url, { method: 'POST' });
+        console.log(`🎮 [BRIDGE] Roku keypress: ${key} → ${ip}`);
+        res.json({ success: response.ok });
+    } catch (error) {
+        console.error('🔴 [BRIDGE] Roku keypress error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /bridge/roku/wake - Wake a Roku device
+app.post('/bridge/roku/wake', async (req, res) => {
+    const { ip, mac, port = 8060 } = req.body;
+    const dgram = require('dgram');
+    
+    if (!mac && !ip) {
+        return res.status(400).json({ error: 'MAC address or IP required' });
+    }
+    
+    try {
+        if (mac) {
+            // Wake-on-LAN magic packet
+            const macBytes = mac.replace(/[:-]/g, '').match(/.{2}/g).map(b => parseInt(b, 16));
+            const magicPacket = Buffer.alloc(102);
+            for (let i = 0; i < 6; i++) magicPacket[i] = 0xff;
+            for (let i = 0; i < 16; i++) {
+                for (let j = 0; j < 6; j++) {
+                    magicPacket[6 + i * 6 + j] = macBytes[j];
+                }
+            }
+            
+            const socket = dgram.createSocket('udp4');
+            socket.once('listening', () => {
+                socket.setBroadcast(true);
+                socket.send(magicPacket, 0, magicPacket.length, 9, '255.255.255.255', (err) => {
+                    socket.close();
+                    if (err) {
+                        console.error('🔴 [BRIDGE] WoL error:', err);
+                        return res.status(500).json({ error: err.message });
+                    }
+                    console.log(`📺 [BRIDGE] WoL packet sent to ${mac}`);
+                    res.json({ success: true, method: 'wol' });
+                });
+            });
+            socket.bind();
+        } else {
+            // ECP power on
+            const url = `http://${ip}:${port}/keypress/PowerOn`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3000);
+            const response = await fetch(url, { method: 'POST', signal: controller.signal });
+            clearTimeout(timeout);
+            console.log(`📺 [BRIDGE] PowerOn sent to ${ip}`);
+            res.json({ success: response.ok, method: 'ecp-poweron' });
+        }
+    } catch (error) {
+        console.error('🔴 [BRIDGE] Wake error:', error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// POST /bridge/scan/cameras - Scan for ONVIF/RTSP cameras
+app.post('/bridge/scan/cameras', async (req, res) => {
+    console.log('🔍 [BRIDGE] Starting camera scan...');
+    
+    // Common camera ports to check
+    const ports = [80, 554, 8080, 8554, 7777];
+    const os = require('os');
+    const net = require('net');
+    
+    // Get local subnet
+    const interfaces = os.networkInterfaces();
+    let subnet = null;
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                const parts = iface.address.split('.');
+                subnet = `${parts[0]}.${parts[1]}.${parts[2]}`;
+                break;
+            }
+        }
+        if (subnet) break;
+    }
+    
+    if (!subnet) {
+        return res.json({ success: false, error: 'Could not detect local network' });
+    }
+    
+    console.log(`   📡 Scanning subnet ${subnet}.0/24...`);
+    
+    const cameras = [];
+    const scanPromises = [];
+    
+    // Scan IPs 1-254
+    for (let i = 1; i <= 254; i++) {
+        const ip = `${subnet}.${i}`;
+        
+        for (const port of ports) {
+            scanPromises.push(new Promise((resolve) => {
+                const socket = new net.Socket();
+                socket.setTimeout(500);
+                
+                socket.on('connect', () => {
+                    socket.destroy();
+                    if (!cameras.find(c => c.ip === ip)) {
+                        cameras.push({ ip, port, type: 'camera-candidate' });
+                        console.log(`   📷 Found device at ${ip}:${port}`);
+                    }
+                    resolve();
+                });
+                
+                socket.on('timeout', () => { socket.destroy(); resolve(); });
+                socket.on('error', () => { socket.destroy(); resolve(); });
+                
+                socket.connect(port, ip);
+            }));
+        }
+    }
+    
+    await Promise.all(scanPromises);
+    console.log(`✅ [BRIDGE] Camera scan complete. Found ${cameras.length} candidate(s)`);
+    res.json({ success: true, cameras });
+});
+
 // ===== STATIC FILES (LAST - ONLY IF NO ROUTE MATCHED) =====
 app.use(express.static(".", { 
     index: false, // Don't serve index.html from static middleware
