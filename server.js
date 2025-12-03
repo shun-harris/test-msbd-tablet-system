@@ -541,7 +541,7 @@ app.post("/create-payment-intent", async (req, res) => {
     console.log("💰 Payment intent request received:", req.body);
     try {
     const { stripe, environment, detection } = getStripeForRequest(req);
-        const { amount, currency = "usd", description = "Dance class payment", payment_method_id, product_type } = req.body;
+        const { amount, currency = "usd", description = "Dance class payment", payment_method_id, product_type, customer_id } = req.body;
         
         console.log(`💳 Creating payment intent: $${amount} ${currency}`);
         
@@ -549,8 +549,14 @@ app.post("/create-payment-intent", async (req, res) => {
         const { phone, name, email } = req.body;
         let customer;
         
+        // CRITICAL FIX: If customer_id is passed (from setup intent), use it directly
+        // This prevents customer mismatch when card was already attached via setup intent
+        if (customer_id) {
+            console.log(`👤 Using customer_id from setup intent: ${customer_id}`);
+            customer = await stripe.customers.retrieve(customer_id);
+        }
         // Try to find existing customer by email first (most reliable), then phone
-        if (email && !email.includes('@tablet.msbdance.com')) {
+        else if (email && !email.includes('@tablet.msbdance.com')) {
             console.log(`🔍 Searching for customer by email: ${email}`);
             let existingCustomers = await stripe.customers.search({
                 query: `email:'${email}'`,

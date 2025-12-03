@@ -47,3 +47,4 @@ Thumbs.db
 
 # Legacy documentation (now consolidated in docs/)
 PATCH_NOTES.md
+.vercel
