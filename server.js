@@ -230,6 +230,8 @@ try {
 const ALLOWED_ORIGINS = [
     'https://tablet.msbdance.com',
     'https://test.tablet.msbdance.com',
+    'https://app.mydancedesk.com',      // CRM production
+    'https://test.mydancedesk.com',     // CRM test
     'http://localhost',
     'http://127.0.0.1'
 ];
@@ -239,6 +241,8 @@ function originAllowed(origin) {
     // Allow any localhost port
     if (/^http:\/\/localhost(:\d+)?$/i.test(origin)) return true;
     if (/^http:\/\/127\.0\.0\.1(:\d+)?$/i.test(origin)) return true;
+    // Allow any 192.168.x.x for local network bridge access
+    if (/^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/i.test(origin)) return true;
     return ALLOWED_ORIGINS.includes(origin);
 }
 
