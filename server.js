@@ -18,8 +18,18 @@ if (process.env.DATABASE_URL) {
     
     pgPool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL.includes('railway.app') ? { rejectUnauthorized: false } : false
+        ssl: process.env.DATABASE_URL.includes('railway.app') ? { rejectUnauthorized: false } : false,
+        // Connection pool settings to prevent stale connections and ECONNRESET
+        max: 5,                      // Maximum pool size
+        idleTimeoutMillis: 30000,    // Close idle connections after 30 seconds
+        connectionTimeoutMillis: 10000, // Fail if can't connect in 10 seconds
     });
+    
+    // Handle pool errors to prevent crashes
+    pgPool.on('error', (err, client) => {
+        console.error('❌ PostgreSQL pool error:', err.message);
+    });
+    
     console.log('✅ PostgreSQL connection pool initialized');
     console.log(`   ├─ Database: ${dbName}`);
     console.log(`   ├─ Host: ${host}`);
