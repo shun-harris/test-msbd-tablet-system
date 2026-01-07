@@ -1067,6 +1067,25 @@
                   Active: <strong id="webhookDestStatus">Loading...</strong>
                 </p>
               </div>
+
+              <!-- Salsa Basics Mode Toggle -->
+              <div class="admin-section">
+                <h4 style="margin:4px 0 6px;color:#eee;text-align:center">Drop-In Options Page Mode</h4>
+                <p style="font-size:11px;color:#999;text-align:center;margin:0 0 10px">Toggle what shows on the drop-in options page</p>
+                <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                  <button id="modeClassBtn" class="mode-btn" data-mode="class" style="flex:1;min-width:120px;padding:12px 14px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600;transition:all .2s">
+                    <div style="font-size:18px;margin-bottom:4px">📚</div>
+                    <div>Salsa Basics</div>
+                  </button>
+                  <button id="modeMerchBtn" class="mode-btn" data-mode="merch" style="flex:1;min-width:120px;padding:12px 14px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600;transition:all .2s">
+                    <div style="font-size:18px;margin-bottom:4px">🎽</div>
+                    <div>Shop Merch</div>
+                  </button>
+                </div>
+                <p style="font-size:10px;color:#888;text-align:center;margin:8px 0 0;line-height:1.3">
+                  Current: <strong id="dropinModeStatus">Loading...</strong>
+                </p>
+              </div>
               
               <div class="admin-section">
                 <h4 style="margin:4px 0 6px;color:#eee">Schedule</h4>
@@ -1584,6 +1603,49 @@
             
             localStorage.setItem('webhookDestinations', JSON.stringify(destinations));
             updateWebhookUI();
+          };
+        });
+      }
+
+      // Drop-In Mode Toggle (Salsa Basics vs Merch)
+      {
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        const modeStatus = document.getElementById('dropinModeStatus');
+        
+        // Get saved mode or default to 'class' (Salsa Basics)
+        const getDropinMode = () => {
+          return localStorage.getItem('dropinPageMode') || 'class';
+        };
+        
+        const updateModeUI = () => {
+          const mode = getDropinMode();
+          
+          modeBtns.forEach(btn => {
+            const btnMode = btn.getAttribute('data-mode');
+            if (btnMode === mode) {
+              btn.style.borderColor = '#d4af37';
+              btn.style.background = 'rgba(212, 175, 55, 0.15)';
+              btn.style.color = '#d4af37';
+            } else {
+              btn.style.borderColor = 'rgba(255,255,255,.2)';
+              btn.style.background = '#1d1f23';
+              btn.style.color = '#cdd0d4';
+            }
+          });
+          
+          // Update status text
+          if (modeStatus) {
+            modeStatus.textContent = mode === 'class' ? 'Salsa Basics Check-In' : 'Shop Merch';
+          }
+        };
+        
+        updateModeUI();
+        
+        modeBtns.forEach(btn => {
+          btn.onclick = () => {
+            const mode = btn.getAttribute('data-mode');
+            localStorage.setItem('dropinPageMode', mode);
+            updateModeUI();
           };
         });
       }
