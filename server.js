@@ -425,9 +425,10 @@ app.get("/lookup/member", async (req, res) => {
             return res.json({ exists: false });
         }
         
-        // Get classes taken from contact record (stored in total_classes column)
-        const classesTaken = parseInt(contact.total_classes || 0);
-        console.log(`📈 Classes taken: ${classesTaken} (from contacts.total_classes)`);
+        // SINGLE SOURCE OF TRUTH: Use calculated_total_classes (baseline + checkin count)
+        // This is always accurate, unlike the denormalized total_classes column
+        const classesTaken = parseInt(contact.calculated_total_classes || contact.total_classes || 0);
+        console.log(`📈 Classes taken: ${classesTaken} (calculated: baseline_classes + checkin count)`);
         
         // Return Make.com compatible format
         const response = {
@@ -482,13 +483,19 @@ app.get("/lookup/drop-in", async (req, res) => {
         
         let contact = null;
         
+        // SINGLE SOURCE OF TRUTH: Calculate total_classes from baseline + checkin count
         // Try phone lookup first - handle multiple formats (+1, without +1, etc.)
         if (normalizedPhone) {
             console.log(`📲 Querying by phone: ${normalizedPhone} (also trying +1${normalizedPhone})`);
             // Match phone numbers - strip non-digits and compare last 10 digits
+            // Join with checkins to get accurate count
             const phoneResult = await pgPool.query(
-                `SELECT * FROM contacts 
-                 WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = $1`,
+                `SELECT c.*, 
+                        COALESCE(c.baseline_classes, 0) + COUNT(ch.id) as calculated_total_classes
+                 FROM contacts c
+                 LEFT JOIN checkins ch ON ch.contact_id = c.id
+                 WHERE RIGHT(REGEXP_REPLACE(c.phone, '[^0-9]', '', 'g'), 10) = $1
+                 GROUP BY c.id`,
                 [normalizedPhone]
             );
             contact = phoneResult.rows[0];
@@ -498,8 +505,14 @@ app.get("/lookup/drop-in", async (req, res) => {
         // Fallback to email lookup
         if (!contact && email) {
             console.log(`📧 Querying by email: ${email}`);
+            // Join with checkins to get accurate count
             const emailResult = await pgPool.query(
-                'SELECT * FROM contacts WHERE LOWER(email) = LOWER($1)',
+                `SELECT c.*, 
+                        COALESCE(c.baseline_classes, 0) + COUNT(ch.id) as calculated_total_classes
+                 FROM contacts c
+                 LEFT JOIN checkins ch ON ch.contact_id = c.id
+                 WHERE LOWER(c.email) = LOWER($1)
+                 GROUP BY c.id`,
                 [email]
             );
             contact = emailResult.rows[0];
@@ -521,9 +534,9 @@ app.get("/lookup/drop-in", async (req, res) => {
             contact_type: contact.contact_type
         });
         
-        // Get classes taken from contact record (stored in total_classes column)
-        const classesTaken = parseInt(contact.total_classes || 0);
-        console.log(`📈 Classes taken: ${classesTaken} (from contacts.total_classes)`);
+        // SINGLE SOURCE OF TRUTH: Use calculated_total_classes (baseline + checkin count)
+        const classesTaken = parseInt(contact.calculated_total_classes || 0);
+        console.log(`📈 Classes taken: ${classesTaken} (calculated: baseline_classes + checkin count)`);
         
         // Return Make.com compatible format
         const response = {
