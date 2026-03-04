@@ -41,13 +41,16 @@ try {
     # Create local tracking branch at test head
     git checkout -B $prodBranch $testHead | Out-Null
 
-    # Fix CNAME for production environment using auto-fix script
-    Write-Step "Auto-fixing CNAME to production domain..."
-    & powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\auto-fix-cname.ps1"
-    # Only commit if CNAME was actually changed
+    # Fix CNAME for production environment — write directly, no subprocess/branch detection
+    Write-Step "Fixing CNAME → tablet.msbdance.com (production)..."
+    Set-Content -Path "CNAME" -Value "tablet.msbdance.com" -NoNewline
+    git add CNAME | Out-Null
     $cnameStatus = git status --porcelain CNAME 2>$null
     if ($cnameStatus) {
         git commit -m "chore: Update CNAME to production domain (tablet.msbdance.com)" | Out-Null
+        Write-Step "CNAME committed: tablet.msbdance.com"
+    } else {
+        Write-Step "CNAME already correct: tablet.msbdance.com"
     }
 
     # Push with force flag to handle CNAME divergence
