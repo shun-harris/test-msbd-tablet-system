@@ -420,6 +420,9 @@
   const ADMIN_PIN = "2468";
   const LOG_URL   = SYNC_URL;
 
+  /* CRM base URL - class list is fetched from here on startup */
+  const PROD_CRM_BASE_URL = "https://app.mydancedesk.com";
+
 
 
   /* Default data (cloud can override) */
@@ -1113,6 +1116,18 @@
         setSyncBadge("ok","Synced ✓");
       } else { }
     }catch(_){ setSyncBadge("bad","Offline"); }
+
+    /* Fetch today's class list from CRM (overrides local schedule for today only) */
+    try {
+      const crmRes = await fetch(`${PROD_CRM_BASE_URL}/api/webhooks/tablet/classes`);
+      if (crmRes.ok) {
+        const crmData = await crmRes.json();
+        if (crmData.ok && Array.isArray(crmData.classes) && crmData.classes.length) {
+          SCHEDULE[todayKey()] = crmData.classes;
+          log('CRM classes loaded for today:', crmData.classes);
+        }
+      }
+    } catch(e) { log('CRM class fetch failed, using local schedule', e.message); }
 
     /* =============================== [SECTION: STATE + SCREEN SWAP] (rarely changes) =============================== */
     let current = { phone:"", name:"" };
