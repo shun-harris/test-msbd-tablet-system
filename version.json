@@ -1,4 +1,4 @@
-﻿{
+{
     "version": "2.9.1",
     "buildDate": "2025-10-08T18:00:00Z",
     "notes": "GHL purchase webhook integration & cash payment redirect fix"
