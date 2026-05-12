@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -7,13 +7,21 @@
   
   <!-- =============================== [SECTION: STYLES] (rarely changes) =============================== -->
   <style>
-    :root{ --gold1:#f3dc8a; --gold2:#b8922a; --text:#f3f4f6; --muted:#c9cacc; }
+    :root{
+      --gold1:#f3dc8a; --gold2:#b8922a;
+      --text:#f0f2f8; --muted:#9ba4c0;
+      --navy0:#060914;   /* deepest — body bg */
+      --navy1:#0b1023;   /* stage bg */
+      --navy2:#0f1630;   /* cards / panels */
+      --navy3:#151e3d;   /* elevated surfaces */
+      --border:rgba(120,140,220,0.14);
+    }
     html,body{ height:100%; }
-    body{ margin:0; background:#0f0f10; color:var(--text); font-family:Inter,system-ui,Arial; }
+    body{ margin:0; background:var(--navy0); color:var(--text); font-family:Inter,system-ui,Arial; }
 
     .stage{
       min-height:100vh; display:flex; align-items:center; justify-content:center;
-      background: radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
+      background: radial-gradient(ellipse 1400px 700px at 35% 10%, #111b40 0%, var(--navy1) 55%, var(--navy0) 100%);
     }
     .stack{ 
       width:min(960px,92%); text-align:center; padding:32px 12px 32px; 
@@ -24,8 +32,68 @@
       justify-content:center;
     }
 
-    .brand{ width:92px;height:92px;margin:0 auto 14px; border-radius:20px; overflow:hidden; }
+    /* Logo glow halo */
+    .brand-wrap {
+      position: relative;
+      width: 92px;
+      height: 92px;
+      margin: 0 auto 14px;
+    }
+    .brand-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -18px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(212,175,55,0.28) 0%, rgba(212,175,55,0.10) 50%, transparent 75%);
+      animation: logo-pulse 3s ease-in-out infinite;
+      z-index: 0;
+    }
+    .brand-wrap::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 26px;
+      box-shadow: 0 0 32px rgba(212,175,55,0.22), 0 0 60px rgba(212,175,55,0.10);
+      z-index: 0;
+    }
+    @keyframes logo-pulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+    .brand { width:92px;height:92px; border-radius:20px; overflow:hidden; position:relative; z-index:1; }
     .brand img{ width:100%; height:100%; object-fit:contain; display:block; }
+
+    /* Success screen checkmark */
+    .check-circle {
+      width: 90px; height: 90px;
+      margin: 0 auto 20px;
+    }
+    .check-circle circle {
+      fill: none;
+      stroke: #a7f3c1;
+      stroke-width: 3;
+      stroke-dasharray: 282;
+      stroke-dashoffset: 282;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    .check-circle polyline {
+      fill: none;
+      stroke: #a7f3c1;
+      stroke-width: 3.5;
+      stroke-dasharray: 80;
+      stroke-dashoffset: 80;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke-dashoffset 0.4s cubic-bezier(0.4,0,0.2,1) 0.5s;
+    }
+    .check-circle.drawn circle { stroke-dashoffset: 0; }
+    .check-circle.drawn polyline { stroke-dashoffset: 0; }
+
+    /* Not-found better state */
+    .nf-icon { font-size: 32px; margin: 0 0 6px; display: block; }
+
+
 
     h1{ margin:0 0 6px; font-size:clamp(32px,6.4vw,56px); font-weight:900; letter-spacing:.3px; }
     .sub{ color:var(--muted); margin:0 0 26px; font-size:clamp(14px,2.6vw,18px); }
@@ -47,9 +115,9 @@
     .btn:active{ transform:scale(.98); }
     .btn-gold{ background:#d4af37; color:#1a1d1f; border:none; box-shadow:0 2px 8px rgba(212,175,55,0.3); }
     .btn-gold:hover:not(.btn-disabled){ box-shadow:0 4px 20px rgba(212,175,55,0.5); background:#d4af37; }
-    .btn-dark{ background:#2a2d2f; color:#f3f4f6; border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.1); }
-    .btn-dark:hover:not(.btn-disabled){ box-shadow:0 4px 12px rgba(0,0,0,0.2); }
-    .btn-disabled{ background:#2a2a2a !important; color:#bbb !important; cursor:not-allowed !important; opacity:.9; }
+    .btn-dark{ background:var(--navy3); color:var(--text); border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.2); }
+    .btn-dark:hover:not(.btn-disabled){ background:var(--navy3); box-shadow:0 4px 14px rgba(0,0,0,0.35); border-color:rgba(120,140,220,0.28); }
+    .btn-disabled{ background:var(--navy2) !important; color:#5a6080 !important; cursor:not-allowed !important; opacity:.9; }
 
     /* Smooth slide-in animations for seamless transitions */
     .slide-in-element {
@@ -145,7 +213,7 @@
     .instant-loader {
       position: fixed;
       inset: 0;
-      background: radial-gradient(1200px 600px at 30% 10%, #1e1f23 0%, #0f1012 55%, #0c0d0f 100%);
+      background: radial-gradient(ellipse 1400px 700px at 35% 10%, #111b40 0%, var(--navy1) 55%, var(--navy0) 100%);
       z-index: 8888;
       display: flex;
       align-items: center;
@@ -191,13 +259,13 @@
 
     .input{
       width:100%; max-width:420px; margin:0 auto; padding:18px 20px;
-      background:#0f1012; color:#fff; border:1px solid rgba(255,255,255,.12);
+      background:var(--navy2); color:var(--text); border:1px solid var(--border);
       border-radius:14px; font-size:clamp(18px,3.8vw,24px); outline:none;
       transition:all .3s ease, transform .2s ease;
     }
     .input:focus{
-      border-color:rgba(243,220,138,.4);
-      box-shadow:0 0 0 3px rgba(243,220,138,.1);
+      border-color:rgba(243,220,138,.5);
+      box-shadow:0 0 0 3px rgba(243,220,138,.12);
       transform:translateY(-1px);
     }
 
@@ -207,10 +275,11 @@
     .input-error{ animation:shake .35s ease; border-color:#ff6b6b !important; }
 
     .chip{
-      padding:22px 26px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
-      background:#121316; color:#eee; font-weight:800; cursor:pointer; text-align:center;
+      padding:22px 26px; border-radius:999px; border:1px solid rgba(120,140,220,0.18);
+      background:linear-gradient(180deg, var(--navy3) 0%, var(--navy2) 100%); color:var(--text); font-weight:800; cursor:pointer; text-align:center;
       width:min(860px,100%); margin:0 auto; position:relative; overflow:hidden; touch-action:manipulation;
       font-size:clamp(20px, 4.6vw, 30px); line-height:1.15;
+      box-shadow:0 1px 0 rgba(255,255,255,0.04) inset, 0 3px 10px rgba(0,0,0,0.25);
     }
     .chip.sel{ background:linear-gradient(180deg,var(--gold1),var(--gold2)); color:#1b1400; }
 
@@ -251,12 +320,12 @@
       transition:all 1.2s cubic-bezier(0.4, 0, 0.2, 1); 
     }
 
-    #adminModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:10000;
-                 align-items:center; justify-content:center; }
-    #adminPanel{ background:linear-gradient(180deg,#17181c,#101113); color:#eee;
+    #adminModal{ display:none; position:fixed; inset:0; background:rgba(4,7,20,.82); z-index:10000;
+                 align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+    #adminPanel{ background:linear-gradient(180deg,var(--navy3),var(--navy2)); color:var(--text);
                  width:min(350px,85vw); max-height:88vh; overflow:auto;
-                 border:1px solid rgba(255,255,255,.15); border-radius:16px; padding:16px; 
-                 box-shadow:0 10px 30px rgba(0,0,0,.8); text-align:center;
+                 border:1px solid rgba(120,140,220,0.22); border-radius:18px; padding:16px; 
+                 box-shadow:0 20px 60px rgba(0,0,0,.9); text-align:center;
                  transition:width 0.3s ease, max-width 0.3s ease; }
     #adminPanel.expanded{ width:min(920px,94%); text-align:left; }
     .pill{ padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
@@ -284,9 +353,10 @@
 
     .btn-sm{ height:52px; font-size:clamp(16px,3vw,20px); border-radius:12px; }
 
-    .nf{ width:min(760px,100%); margin:0 auto; max-height:0; overflow:hidden; transition:max-height 280ms ease, margin-top 280ms ease; }
-    .nf.open{ margin-top:10px; max-height:220px; }
-    .nf-text{ color:#c9cacc; text-align:center; font-size:clamp(13px,2.4vw,16px); margin:6px 0 8px; }
+    .nf{ width:min(760px,100%); margin:0 auto; max-height:0; overflow:hidden; transition:max-height 320ms ease, margin-top 320ms ease; }
+    .nf.open{ margin-top:14px; max-height:260px; }
+    .nf-icon{ font-size:28px; display:block; margin:0 0 4px; }
+    .nf-text{ color:var(--muted); text-align:center; font-size:clamp(13px,2.4vw,16px); margin:4px 0 10px; font-weight:500; }
     .nf-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     @media (max-width:480px){ .nf-actions{ grid-template-columns:1fr; } }
     .error-message{opacity:0;transform:translateY(-6px);transition:opacity 180ms ease,transform 180ms ease;}
@@ -310,16 +380,16 @@
     }
     .nkey{
       height:84px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:#2a2d2f;
-      color:#f3f4f6;
+      border-radius:12px;
+      border:1px solid rgba(120,140,220,0.18);
+      background:linear-gradient(180deg, var(--navy3) 0%, var(--navy2) 100%);
+      color:var(--text);
       font-weight:600;
       font-size:clamp(22px,4.8vw,30px);
       cursor:pointer;
       display:flex; align-items:center; justify-content:center;
-      box-shadow:0 2px 4px rgba(0,0,0,0.1);
-      transition:all .2s ease;
+      box-shadow:0 1px 0 rgba(255,255,255,0.05) inset, 0 3px 8px rgba(0,0,0,0.3);
+      transition:all .15s ease;
       position:relative; overflow:hidden; touch-action:manipulation;
       opacity:0; transform:translateY(15px) scale(0.9);
     }
@@ -328,8 +398,9 @@
     }
     .nkey:hover{
       transform:translateY(-2px);
-      box-shadow:0 4px 12px rgba(0,0,0,0.15);
-      background:#35383a;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07) inset, 0 6px 16px rgba(0,0,0,0.4);
+      background:linear-gradient(180deg, #1e2a55 0%, #141e40 100%);
+      border-color:rgba(120,140,220,0.30);
     }
     .nkey:active{ transform:scale(.98); }
     .nkey.muted{ opacity:.9; }
@@ -356,6 +427,7 @@
 <body>
   <div id="app"></div>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
 
 
 
@@ -470,30 +542,16 @@
       input.dataset.digits = cleaned;
       input.value = formatPhonePretty(cleaned);
       input.dispatchEvent(new Event("input", {bubbles:true}));
-    }
-
-    // seed with existing value (if any)
-    setDigits(input.dataset.digits || digits10(input.value||""));
-
-    // build pad grid
-    const grid = document.createElement("div");
-    grid.className = "numpad";
-    host.appendChild(grid);
-
-    const push  = (n) => () => setDigits((input.dataset.digits||"") + String(n));
-    const back  = () => setDigits((input.dataset.digits||"").slice(0,-1));
-    const clear = () => setDigits("");
-
-    [1,2,3,4,5,6,7,8,9].forEach(n=> grid.appendChild(makeKey(String(n), "", push(n))));
-    grid.appendChild(makeKey("C", "muted", clear));
-    grid.appendChild(makeKey("0", "", push(0)));
-    grid.appendChild(makeKey("⌫", "muted", back));
-  }
-
-
-
-  /* =============================== [SECTION: CLOUD SYNC] (sometimes changes) =============================== */
-  /* JSONP (for Apps Script) */
+      // Auto-advance when 10 digits entered
+      if (cleaned.length === 10) {
+        setTimeout(() => {
+          // Find the Next button for this pad's screen
+          const nextBtn = forInputId === 'inpDrop' ? document.getElementById('btnDropNext')
+                        : forInputId === 'inpPhone' ? document.getElementById('btnNext')
+                        : null;
+          if (nextBtn && !nextBtn.classList.contains('btn-disabled')) nextBtn.click();
+        }, 180);
+      }
   function jsonp(url){
     return new Promise(res=>{
       const cb='cb_'+Math.random().toString(36).slice(2);
@@ -903,11 +961,13 @@
       <div class="stage"><div class="stack">
         <!-- ========== [SECTION: SCREEN – WELCOME] (UI text changes) ========== -->
         <div id="scr-welcome" class="screen show">
-          <div class="brand slide-in-element">${LOGO_URL?`<img src="${LOGO_URL}" alt="logo" onerror="this.style.display='none'">`:""}</div>
+          <div class="brand-wrap slide-in-element">
+            <div class="brand">${LOGO_URL?`<img src="${LOGO_URL}" alt="logo" onerror="this.style.display='none'">`:""}</div>
+          </div>
           <h1 class="slide-in-element">WELCOME TO<br>MSBD STUDIO</h1>
           <p class="sub slide-in-element">Check in below <span class="gold-icon">↓</span></p>
           <div style="display:grid; gap:14px; max-width:420px; width:100%; margin:0 auto;">
-            <button id="btnDropin" class="btn btn-gold slide-in-element">🎟 Drop-In Check-In</button>
+            <button id="btnDropin" class="btn btn-gold slide-in-element">Drop-In Check-In</button>
             <button id="btnMember" class="btn btn-dark slide-in-element">
               <svg class="gold-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26">
                 <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
@@ -930,6 +990,7 @@
           </div>
 
           <div id="dropNotFound" class="nf">
+            <span class="nf-icon error-message" id="dropErrIcon"><i data-lucide="user-x" style="width:28px;height:28px;stroke:currentColor;opacity:0.6;"></i></span>
             <div id="dropErr" class="nf-text error-message">We didn’t find that number.</div>
             <div id="dropBtns" class="nf-actions secondary-buttons">
               <button id="btnDropImNew" class="btn btn-gold btn-sm">I’m new</button>
@@ -989,13 +1050,17 @@
         </div>
 
   <!-- ========== [SECTION: SCREEN – SUCCESS] (text/timer changes) ========== -->
-  <div id="scr-done" class="screen">
-    <h2 id="doneTitle" style="font-size:clamp(26px,6vw,44px);margin:0 0 10px;font-weight:900;color:#a7f3c1">
-      You’re checked in! ✅
+  <div id="scr-done" class="screen" style="text-align:center;">
+    <svg class="check-circle success-title" viewBox="0 0 100 100" style="display:block;width:88px;height:88px;margin:0 auto 18px;">
+      <circle cx="50" cy="50" r="44"/>
+      <polyline points="28,52 43,67 72,36"/>
+    </svg>
+    <h2 id="doneTitle" class="success-detail" style="font-size:clamp(26px,6vw,44px);margin:0 0 10px;font-weight:900;color:#a7f3c1;opacity:0;transform:translateY(18px);transition:opacity 0.5s ease 0.5s,transform 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.5s">
+      You’re checked in!
     </h2>
-    <p id="doneDetail" style="color:#d1d5db"></p>
-    <p class="sub" style="margin:8px 0 18px;">Going back in <b id="countdown">5</b>…</p>
-    <div style="display:grid; gap:14px; width:min(480px,100%); margin:0 auto;">
+    <p id="doneDetail" class="success-detail" style="color:#d1d5db;opacity:0;transform:translateY(14px);transition:opacity 0.5s ease 0.65s,transform 0.5s ease 0.65s"></p>
+    <p class="sub success-countdown" style="margin:8px 0 18px;opacity:0;transform:translateY(12px);transition:opacity 0.4s ease 0.82s,transform 0.4s ease 0.82s">Going back in <b id="countdown">5</b>…</p>
+    <div class="success-button" style="display:grid;gap:14px;width:min(480px,100%);margin:0 auto;opacity:0;transform:translateY(10px);transition:opacity 0.4s ease 1s,transform 0.4s ease 1s">
       <button id="btnDone" class="btn btn-dgold">Done</button>
     </div>
   </div>
@@ -1004,7 +1069,7 @@
 
         <!-- ========== [SECTION: SCREEN – ADMIN FAB + MODAL] (sometimes changes) ========== -->
         <button id="adminFab" title="Admin"
-          style="position:fixed;right:16px;bottom:16px;width:56px;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:#0f0f10;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.6)">⚙️</button>
+          style="position:fixed;right:16px;bottom:16px;width:56px;height:56px;border-radius:999px;border:1px solid rgba(120,140,220,0.2);background:var(--navy2);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.7);"><i data-lucide="settings" style="width:20px;height:20px;stroke:currentColor;pointer-events:none;"></i></button>
 
         <div id="adminModal">
           <div id="adminPanel">
@@ -1057,15 +1122,15 @@
                 <p style="font-size:11px;color:#999;text-align:center;margin:0 0 10px">Select where to send check-in data (min 1, max 3)</p>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
                   <button id="webhookGHL" class="webhook-dest-btn" data-dest="ghl" style="padding:10px 8px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s">
-                    <div style="font-size:16px;margin-bottom:4px">📞</div>
+                    <div style="margin-bottom:6px;display:flex;justify-content:center"><i data-lucide="phone" style="width:16px;height:16px;stroke:currentColor;"></i></div>
                     <div>GHL</div>
                   </button>
                   <button id="webhookTestCRM" class="webhook-dest-btn" data-dest="test-crm" style="padding:10px 8px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s">
-                    <div style="font-size:16px;margin-bottom:4px">🧪</div>
+                    <div style="margin-bottom:6px;display:flex;justify-content:center"><i data-lucide="flask-conical" style="width:16px;height:16px;stroke:currentColor;"></i></div>
                     <div>Test CRM</div>
                   </button>
                   <button id="webhookProdCRM" class="webhook-dest-btn" data-dest="prod-crm" style="padding:10px 8px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s">
-                    <div style="font-size:16px;margin-bottom:4px">🚀</div>
+                    <div style="margin-bottom:6px;display:flex;justify-content:center"><i data-lucide="zap" style="width:16px;height:16px;stroke:currentColor;"></i></div>
                     <div>Prod CRM</div>
                   </button>
                 </div>
@@ -1080,11 +1145,11 @@
                 <p style="font-size:11px;color:#999;text-align:center;margin:0 0 10px">Toggle what shows on the drop-in options page</p>
                 <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
                   <button id="modeClassBtn" class="mode-btn" data-mode="class" style="flex:1;min-width:120px;padding:12px 14px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600;transition:all .2s">
-                    <div style="font-size:18px;margin-bottom:4px">📚</div>
+                    <div style="margin-bottom:6px;display:flex;justify-content:center"><i data-lucide="book-open" style="width:18px;height:18px;stroke:currentColor;"></i></div>
                     <div>Salsa Basics</div>
                   </button>
                   <button id="modeMerchBtn" class="mode-btn" data-mode="merch" style="flex:1;min-width:120px;padding:12px 14px;border:2px solid rgba(255,255,255,.2);border-radius:8px;background:#1d1f23;color:#cdd0d4;font-size:12px;cursor:pointer;font-weight:600;transition:all .2s">
-                    <div style="font-size:18px;margin-bottom:4px">🎽</div>
+                    <div style="margin-bottom:6px;display:flex;justify-content:center"><i data-lucide="shopping-bag" style="width:18px;height:18px;stroke:currentColor;"></i></div>
                     <div>Shop Merch</div>
                   </button>
                 </div>
@@ -1208,7 +1273,7 @@
         element.classList.remove('animate');
         setTimeout(() => {
           element.classList.add('animate');
-        }, i * 50);
+        }, i * 60);
       });
     }
     
@@ -1248,6 +1313,8 @@
         const el = document.querySelector(selector);
         if (el) el.classList.add('celebrate');
       });
+      const circle = document.querySelector('.check-circle');
+      if (circle) circle.classList.add('drawn');
     }
 
     /* =============================== [SECTION: HOME BUTTONS] (often changes) =============================== */
@@ -1437,7 +1504,7 @@
           return;
         }
 
-        const url = `${DROPIN_RETURN_URL}?phone=${encodeURIComponent(d)}&name=${encodeURIComponent(firstName.value.trim())}`;
+        const url = `${DROPIN_RETURN_URL}?phone=${encodeURIComponent(d)}&name=${encodeURIComponent(firstName.value.trim())}&email=${encodeURIComponent(email.value.trim())}`;
         window.location.href = url;
       };
     });
@@ -1818,9 +1885,11 @@
       try {
         current.phone = d;
         current.name  = result.name || "Member";
-        $("#hello").textContent = `Welcome back, ${current.name}`;
-        // initials - just first initial
-        const getInitials = name => { const p=String(name||"").split(/\s+/).filter(Boolean); return p[0] ? p[0][0] : "M"; };
+        // Highlighted name reveal
+        const firstName = current.name.split(/\s+/)[0];
+        $("#hello").innerHTML = `Welcome back, <span style="color:var(--gold1);">${firstName}</span>`;
+        // initials - first two words
+        const getInitials = name => { const p=String(name||"").split(/\s+/).filter(Boolean); return (p[0]?p[0][0]:"M")+(p[1]?p[1][0]:""); };
         const pb = $("#profileBubble"); if(pb) pb.textContent = getInitials(current.name).toUpperCase();
         // classes pill with count-up animation
         const classesTaken = Number(result.classesTaken)||0; 
@@ -2086,6 +2155,9 @@
       }
     }, 150);
   });
+
+  // Initialize Lucide icons
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   </script>
 
   <!-- =============================== [SECTION: STYLES – CTA BAR] =============================== -->
@@ -2112,7 +2184,16 @@
     .greet-row{ display:flex; align-items:center; gap:12px; width:min(900px,100%); margin:0 auto 16px; text-align:left; padding:0 8px; }
     .greet-text .greet{ margin:0; font-size:clamp(20px,4.2vw,28px); font-weight:900; }
     .greet-text .meta-line{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:clamp(11px,2.2vw,13px); flex-wrap:wrap; }
-    .profile-bubble{ width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-weight:900; color:#1b1400; background:linear-gradient(180deg,var(--gold1),var(--gold2)); box-shadow: inset 0 -1px 0 rgba(0,0,0,.35); flex-shrink:0; }
+    .profile-bubble{
+      width:52px; height:52px; border-radius:999px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:18px; letter-spacing:-0.5px;
+      color:#1b1400;
+      background:linear-gradient(135deg,var(--gold1),var(--gold2));
+      box-shadow: 0 0 0 2.5px var(--navy2), 0 0 0 4.5px rgba(212,175,55,0.5), 0 4px 14px rgba(212,175,55,0.3);
+      flex-shrink:0;
+      transition: box-shadow 0.3s ease;
+    }
     .pill-soft{ padding:3px 9px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); font-size:clamp(10px,2vw,12px); }
 
     /* Scrollable container for class list to prevent overflow */
