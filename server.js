@@ -18,7 +18,7 @@ if (process.env.DATABASE_URL) {
     
     pgPool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL.includes('railway.app') ? { rejectUnauthorized: false } : false,
+        ssl: (process.env.DATABASE_URL.includes('railway.app') || process.env.DATABASE_URL.includes('rlwy.net')) ? { rejectUnauthorized: false } : false,
         max: 5,
         idleTimeoutMillis: 10000,        // Discard idle connections after 10s (before DB drops them)
         connectionTimeoutMillis: 10000,
