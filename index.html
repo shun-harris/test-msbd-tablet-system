@@ -552,6 +552,30 @@
           if (nextBtn && !nextBtn.classList.contains('btn-disabled')) nextBtn.click();
         }, 180);
       }
+    }
+
+    // seed with existing value (if any)
+    setDigits(input.dataset.digits || digits10(input.value||""));
+
+    // build pad grid
+    const grid = document.createElement("div");
+    grid.className = "numpad";
+    host.appendChild(grid);
+
+    const push  = (n) => () => setDigits((input.dataset.digits||"") + String(n));
+    const back  = () => setDigits((input.dataset.digits||"").slice(0,-1));
+    const clear = () => setDigits("");
+
+    [1,2,3,4,5,6,7,8,9].forEach(n=> grid.appendChild(makeKey(String(n), "", push(n))));
+    grid.appendChild(makeKey("C", "muted", clear));
+    grid.appendChild(makeKey("0", "", push(0)));
+    grid.appendChild(makeKey("⌫", "muted", back));
+  }
+
+
+
+  /* =============================== [SECTION: CLOUD SYNC] (sometimes changes) =============================== */
+  /* JSONP (for Apps Script) */
   function jsonp(url){
     return new Promise(res=>{
       const cb='cb_'+Math.random().toString(36).slice(2);
