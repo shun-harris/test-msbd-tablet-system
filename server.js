@@ -664,20 +664,20 @@ app.post("/create-payment-intent", async (req, res) => {
         
         // Create new customer if not found
         if (!customer) {
-            // Create new customer with real email if available
+            // Only set email if we have a real one — never use fake placeholder emails
             const customerData = {
                 phone: phone,
                 name: name || 'Dance Student',
-                email: email || `${phone}@tablet.msbdance.com`,
+                ...(email ? { email } : {}),
                 metadata: { 
                     source: 'tablet_system', 
                     phone: phone,
-                    created_via: email ? 'webhook_with_email' : 'tablet_fallback'
+                    created_via: email ? 'webhook_with_email' : 'tablet_no_email'
                 }
             };
             
             customer = await stripe.customers.create(customerData);
-            console.log(`👤 Created new customer: ${customer.id} for phone ${phone}${email ? ` with email ${email}` : ' with fallback email'}`);
+            console.log(`👤 Created new customer: ${customer.id} for phone ${phone}${email ? ` with email ${email}` : ' (no email)'}`);
         }
 
         const paymentIntentData = {
@@ -1086,13 +1086,13 @@ app.post("/add-payment-method", async (req, res) => {
             customer = await stripe.customers.create({
                 phone: phone,
                 name: name || 'Dance Student',
-                email: email || `${phone}@tablet.msbdance.com`,
+                ...(email ? { email } : {}),
                 metadata: { 
                     source: 'tablet_system', 
                     phone: phone 
                 }
             });
-            console.log(`👤 Created new customer: ${customer.id} (phone: ${phone}, name: ${name || 'Dance Student'}, email: ${email || 'fallback'})`);
+            console.log(`👤 Created new customer: ${customer.id} (phone: ${phone}, name: ${name || 'Dance Student'}, email: ${email || 'none'})`);
         }
         
         // Attach payment method to customer first
@@ -1256,16 +1256,16 @@ app.post("/create-setup-intent", async (req, res) => {
             const customerData = {
                 phone: phone,
                 name: name || 'Dance Student',
-                email: email || `${phone}@tablet.msbdance.com`,
+                ...(email ? { email } : {}),
                 metadata: { 
                     source: 'tablet_system', 
                     phone: phone,
-                    created_via: email ? 'setup_intent_with_email' : 'setup_intent_fallback'
+                    created_via: email ? 'setup_intent_with_email' : 'setup_intent_no_email'
                 }
             };
             
             customer = await stripe.customers.create(customerData);
-            console.log(`👤 Created new customer: ${customer.id} for phone ${phone}${email ? ` with email ${email}` : ' with fallback email'}`);
+            console.log(`👤 Created new customer: ${customer.id} for phone ${phone}${email ? ` with email ${email}` : ' (no email)'}`);
         }
         
         const setupIntent = await stripe.setupIntents.create({
