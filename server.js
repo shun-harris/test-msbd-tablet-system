@@ -19,10 +19,11 @@ if (process.env.DATABASE_URL) {
     pgPool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.DATABASE_URL.includes('railway.app') ? { rejectUnauthorized: false } : false,
-        // Connection pool settings to prevent stale connections and ECONNRESET
-        max: 5,                      // Maximum pool size
-        idleTimeoutMillis: 30000,    // Close idle connections after 30 seconds
-        connectionTimeoutMillis: 10000, // Fail if can't connect in 10 seconds
+        max: 5,
+        idleTimeoutMillis: 10000,        // Discard idle connections after 10s (before DB drops them)
+        connectionTimeoutMillis: 10000,
+        keepAlive: true,                 // TCP keepalive to detect dead connections
+        keepAliveInitialDelayMillis: 5000,
     });
     
     // Handle pool errors to prevent crashes
@@ -35,7 +36,21 @@ if (process.env.DATABASE_URL) {
     console.log(`   ├─ Host: ${host}`);
     console.log(`   └─ Environment: ${process.env.APP_ENV || 'auto-detect'}`);
 } else {
+
     console.warn('⚠️  DATABASE_URL not set - contact lookup will not work');
+}
+
+// ================= DB Query with ECONNRESET Retry =================
+async function dbQuery(pool, sql, params) {
+    try {
+        return await pool.query(sql, params);
+    } catch (err) {
+        if (err.code === 'ECONNRESET' || err.code === 'EPIPE' || err.code === 'ENOTFOUND') {
+            console.warn('⚠️  DB connection dropped, retrying once...');
+            return await pool.query(sql, params);
+        }
+        throw err;
+    }
 }
 
 // ================= Environment Detection & Logging =================
@@ -328,7 +343,7 @@ app.get("/test/database", async (req, res) => {
     }
     
     try {
-        const result = await pgPool.query('SELECT NOW() as current_time, COUNT(*) as contact_count FROM contacts');
+        const result = await dbQuery(pgPool, 'SELECT NOW() as current_time, COUNT(*) as contact_count FROM contacts');
         console.log(`✅ Database query successful:`, result.rows[0]);
         res.json({
             ok: true,
@@ -380,7 +395,7 @@ app.get("/lookup/member", async (req, res) => {
         // IMPORTANT: Exclude soft-deleted contacts, prefer members over non-members (duplicate safety)
         if (normalizedPhone) {
             console.log(`📲 Querying by phone: ${normalizedPhone} (also trying +1${normalizedPhone})`);
-            const phoneResult = await pgPool.query(
+            const phoneResult = await dbQuery(pgPool, 
                 `SELECT c.*, 
                         COALESCE(c.baseline_classes, 0) + COUNT(ch.id) as calculated_total_classes
                  FROM contacts c
@@ -398,7 +413,7 @@ app.get("/lookup/member", async (req, res) => {
         // Fallback to email lookup
         if (!contact && email) {
             console.log(`📧 Querying by email: ${email}`);
-            const emailResult = await pgPool.query(
+            const emailResult = await dbQuery(pgPool, 
                 `SELECT c.*, 
                         COALESCE(c.baseline_classes, 0) + COUNT(ch.id) as calculated_total_classes
                  FROM contacts c
@@ -502,7 +517,7 @@ app.get("/lookup/drop-in", async (req, res) => {
         // Try phone lookup first - exclude soft-deleted contacts
         if (normalizedPhone) {
             console.log(`📲 Querying by phone: ${normalizedPhone} (also trying +1${normalizedPhone})`);
-            const phoneResult = await pgPool.query(
+            const phoneResult = await dbQuery(pgPool, 
                 `SELECT c.*, 
                         COALESCE(c.baseline_classes, 0) + COUNT(ch.id) as calculated_total_classes
                  FROM contacts c
@@ -520,7 +535,7 @@ app.get("/lookup/drop-in", async (req, res) => {
         // Fallback to email lookup
         if (!contact && email) {
             console.log(`📧 Querying by email: ${email}`);
-            const emailResult = await pgPool.query(
+            const emailResult = await dbQuery(pgPool, 
                 `SELECT c.*, 
                         COALESCE(c.baseline_classes, 0) + COUNT(ch.id) as calculated_total_classes
                  FROM contacts c
@@ -1758,3 +1773,4 @@ app.listen(PORT, () => {
     console.log(`🔎 Environment detection order: APP_ENV override > custom domains > Railway patterns > localhost > fallback`);
     console.log(`💡 Set APP_ENV=production or APP_ENV=test in Railway variables to force mode.`);
 });
+
