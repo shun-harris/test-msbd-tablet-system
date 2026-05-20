@@ -1,0 +1,11 @@
+name = "msbd-tablet-api"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[[kv_namespaces]]
+binding = "CONTACTS"
+id = "14c762e67b9e412297e0ba2a436718fe"
+
+[[kv_namespaces]]
+binding = "CHECKINS"
+id = "4722d8a4267b4a768907a2df0c2f2aa4"
