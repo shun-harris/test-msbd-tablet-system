@@ -860,7 +860,7 @@
   // CRM lookup via tablet's own PostgreSQL database
   async function verifyViaCRM(phone, product, timeoutMs = 8000){
     try{
-      // Cloudflare Worker backend (Railway backup while Railway is down)
+      // Cloudflare Worker backend (Railway is down — Worker runs on Cloudflare edge)
       const API_BASE = 'https://msbd-tablet-api.shunharris95.workers.dev';
       const endpoint = product === 'checkmember' ? '/lookup/member' : '/lookup/drop-in';
       const u = new URL(endpoint, API_BASE);

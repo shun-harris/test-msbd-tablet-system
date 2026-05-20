@@ -80,11 +80,16 @@ async function getActiveMembers() {
   let hasMore = true;
   let page = 0;
 
-  console.log("📡 Fetching active Stripe subscriptions...");
+  // Fetch active, trialing, AND past_due — annual plans often show as trialing
+  // Omitting status filter returns ALL statuses; we filter out canceled ones client-side
+  console.log("📡 Fetching Stripe subscriptions (active + trialing + past_due)...");
+
+  const MEMBER_STATUSES = new Set(["active", "trialing", "past_due"]);
 
   while (hasMore) {
     page++;
-    let url = `/v1/subscriptions?status=active&limit=100&expand[]=data.customer`;
+    // No status filter = all statuses; we filter client-side so we catch trialing annual plans
+    let url = `/v1/subscriptions?limit=100&expand[]=data.customer`;
     if (startingAfter) url += `&starting_after=${startingAfter}`;
 
     const data = await stripeRequest(url);
@@ -95,6 +100,7 @@ async function getActiveMembers() {
     }
 
     for (const sub of data.data || []) {
+      if (!MEMBER_STATUSES.has(sub.status)) continue; // skip canceled, unpaid, etc.
       const cust = sub.customer;
       if (typeof cust === "object") {
         const phone = normalizePhone(cust.phone || cust.metadata?.phone);
@@ -136,6 +142,10 @@ async function main() {
   let memberCount = 0;
   let skipped = 0;
 
+  // Use Maps to deduplicate — if same phone/email appears twice, prefer the member version
+  const phoneMap = new Map();
+  const emailMap = new Map();
+
   for (const contact of contacts) {
     const firstName = contact["First Name"] || "";
     const lastName = contact["Last Name"] || "";
@@ -166,12 +176,22 @@ async function main() {
       classesTaken: 0,
     });
 
+    // For duplicates: prefer member records over non-member records
     if (normalizedPhone) {
-      kvEntries.push({ key: `phone:${normalizedPhone}`, value: data });
+      const existing = phoneMap.get(normalizedPhone);
+      if (!existing || isMember) phoneMap.set(normalizedPhone, data);
     }
     if (normalizedEmail) {
-      kvEntries.push({ key: `email:${normalizedEmail}`, value: data });
+      const existing = emailMap.get(normalizedEmail);
+      if (!existing || isMember) emailMap.set(normalizedEmail, data);
     }
+  }
+
+  for (const [phone, data] of phoneMap) {
+    kvEntries.push({ key: `phone:${phone}`, value: data });
+  }
+  for (const [email, data] of emailMap) {
+    kvEntries.push({ key: `email:${email}`, value: data });
   }
 
   fs.writeFileSync(OUTPUT_PATH, JSON.stringify(kvEntries, null, 2));
