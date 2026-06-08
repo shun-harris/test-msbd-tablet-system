@@ -865,8 +865,7 @@
       const API_BASE = TEST
         ? 'https://mydancedesk-test-production.up.railway.app/api/webhooks/tablet'
         : 'https://mydancedesk-prod-main.up.railway.app/api/webhooks/tablet';
-      const endpoint = '/member-lookup';
-      const u = new URL(endpoint, API_BASE);
+      const u = new URL(`${API_BASE}/member-lookup`);
       u.searchParams.set("phone", phone);
       
       console.log(`🔍 CRM Lookup Starting:`, {
